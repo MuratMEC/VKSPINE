@@ -28,9 +28,8 @@ export default function LoginPage() {
                 throw new Error(data.error || "Giriş başarısız oldu.");
             }
 
-            // Başarılı giriş
             router.push('/');
-            router.refresh(); // Middleware'in algılaması için
+            router.refresh();
 
         } catch (err: any) {
             setError(err.message);
@@ -40,44 +39,54 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col justify-center relative overflow-hidden selection:bg-blue-100">
-
+        <div style={{
+            minHeight: '100vh',
+            backgroundColor: '#f8fafc',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            position: 'relative',
+            overflow: 'hidden',
+        }}>
             {/* Arka plan süslemeleri */}
-            <div className="absolute top-0 left-1/2 -ml-[30rem] w-[60rem] h-[60rem] bg-blue-100/50 rounded-full blur-3xl opacity-50 -z-10 animate-blob"></div>
-            <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-indigo-50/50 rounded-full blur-3xl opacity-50 -z-10 animate-blob animation-delay-2000"></div>
-            <div className="absolute -bottom-32 left-20 w-[30rem] h-[30rem] bg-emerald-50/50 rounded-full blur-3xl opacity-50 -z-10 animate-blob animation-delay-4000"></div>
+            <div style={{ position: 'absolute', top: 0, left: '50%', marginLeft: '-30rem', width: '60rem', height: '60rem', background: 'rgba(219, 234, 254, 0.5)', borderRadius: '9999px', filter: 'blur(64px)', opacity: 0.5, zIndex: 0 }} />
+            <div style={{ position: 'absolute', top: 0, right: 0, width: '40rem', height: '40rem', background: 'rgba(238, 242, 255, 0.5)', borderRadius: '9999px', filter: 'blur(64px)', opacity: 0.5, zIndex: 0 }} />
 
-            <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-                <div className="flex justify-center mb-6">
-                    <div className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl p-4 shadow-lg shadow-blue-500/30 transform transition-transform hover:scale-105">
-                        <Activity className="w-10 h-10" />
+            {/* Logo ve başlık */}
+            <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', marginBottom: '2rem', width: '100%', maxWidth: '28rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                    <div style={{ background: 'linear-gradient(135deg, #2563eb, #4f46e5)', color: 'white', borderRadius: '1rem', padding: '1rem', boxShadow: '0 10px 25px rgba(37, 99, 235, 0.3)' }}>
+                        <Activity style={{ width: '2.5rem', height: '2.5rem' }} />
                     </div>
                 </div>
-                <h2 className="mt-2 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
-                    VK Spine <span className="text-blue-600">MediStock</span>
+                <h2 style={{ fontSize: '1.875rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.025em', margin: 0 }}>
+                    VK Spine <span style={{ color: '#2563eb' }}>MediStock</span>
                 </h2>
-                <p className="mt-2 text-center text-sm text-slate-500 font-medium">
+                <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#64748b', fontWeight: 500 }}>
                     Tıbbi Ürün Stok ve İzlenebilirlik Sistemi
                 </p>
             </div>
 
-            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-                <div className="bg-white/80 backdrop-blur-xl py-8 px-4 shadow-xl sm:rounded-3xl sm:px-10 border border-slate-200/60">
+            {/* Form kartı */}
+            <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '28rem' }}>
+                <div style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(16px)', padding: '2rem', boxShadow: '0 20px 60px rgba(0,0,0,0.08)', borderRadius: '1.5rem', border: '1px solid rgba(203, 213, 225, 0.5)' }}>
 
                     {error && (
-                        <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg border border-red-200 text-center font-medium">
+                        <div style={{ marginBottom: '1rem', padding: '0.75rem', background: '#fef2f2', color: '#b91c1c', fontSize: '0.875rem', borderRadius: '0.5rem', border: '1px solid #fecaca', textAlign: 'center', fontWeight: 500 }}>
                             {error}
                         </div>
                     )}
 
-                    <form className="space-y-6" onSubmit={handleSubmit}>
+                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div>
-                            <label htmlFor="email" className="block text-sm font-semibold text-slate-700">
+                            <label htmlFor="email" style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.5rem' }}>
                                 E-Posta Adresi
                             </label>
-                            <div className="mt-2 relative rounded-xl shadow-sm">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Mail className="h-5 w-5 text-slate-400" />
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', top: 0, bottom: 0, left: '0.75rem', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+                                    <Mail style={{ width: '1.25rem', height: '1.25rem', color: '#94a3b8' }} />
                                 </div>
                                 <input
                                     id="email"
@@ -85,18 +94,19 @@ export default function LoginPage() {
                                     required
                                     value={form.email}
                                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                    className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white/50 backdrop-blur-sm transition-all outline-none"
+                                    placeholder="admin@vkspine.com"
+                                    style={{ display: 'block', width: '100%', paddingLeft: '2.5rem', paddingRight: '0.75rem', paddingTop: '0.75rem', paddingBottom: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '0.75rem', fontSize: '0.875rem', background: 'rgba(255,255,255,0.5)', outline: 'none', boxSizing: 'border-box' }}
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label htmlFor="password" className="block text-sm font-semibold text-slate-700">
+                            <label htmlFor="password" style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.5rem' }}>
                                 Şifre
                             </label>
-                            <div className="mt-2 relative rounded-xl shadow-sm">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Lock className="h-5 w-5 text-slate-400" />
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', top: 0, bottom: 0, left: '0.75rem', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+                                    <Lock style={{ width: '1.25rem', height: '1.25rem', color: '#94a3b8' }} />
                                 </div>
                                 <input
                                     id="password"
@@ -104,24 +114,22 @@ export default function LoginPage() {
                                     required
                                     value={form.password}
                                     onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                    className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white/50 backdrop-blur-sm transition-all outline-none"
+                                    style={{ display: 'block', width: '100%', paddingLeft: '2.5rem', paddingRight: '0.75rem', paddingTop: '0.75rem', paddingBottom: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '0.75rem', fontSize: '0.875rem', background: 'rgba(255,255,255,0.5)', outline: 'none', boxSizing: 'border-box' }}
                                 />
                             </div>
                         </div>
 
-                        <div>
-                            <button
-                                disabled={loading}
-                                type="submit"
-                                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-md shadow-blue-500/20 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all active:scale-[0.98] group disabled:opacity-70 disabled:cursor-not-allowed"
-                            >
-                                {loading ? (
-                                    <span className="flex items-center"><Loader2 className="mr-2 w-4 h-4 animate-spin" /> Giriş Yapılıyor...</span>
-                                ) : (
-                                    <span className="flex items-center">Giriş Yap <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" /></span>
-                                )}
-                            </button>
-                        </div>
+                        <button
+                            disabled={loading}
+                            type="submit"
+                            style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', border: 'none', borderRadius: '0.75rem', fontSize: '0.875rem', fontWeight: 700, color: 'white', background: loading ? '#93c5fd' : '#2563eb', cursor: loading ? 'not-allowed' : 'pointer', boxShadow: '0 4px 15px rgba(37, 99, 235, 0.25)', transition: 'all 0.2s' }}
+                        >
+                            {loading ? (
+                                <><Loader2 style={{ width: '1rem', height: '1rem' }} /> Giriş Yapılıyor...</>
+                            ) : (
+                                <><span>Giriş Yap</span><ArrowRight style={{ width: '1rem', height: '1rem' }} /></>
+                            )}
+                        </button>
                     </form>
                 </div>
             </div>
