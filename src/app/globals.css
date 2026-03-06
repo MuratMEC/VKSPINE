@@ -1,5 +1,5 @@
-/* Tailwind v4 - sadece utility sınıflarını çek, base reset Mantine'den gelecek */
-@import "tailwindcss/utilities";
+/* Tailwind v4 - tam import */
+@import "tailwindcss";
 
 body {
   font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -7,12 +7,6 @@ body {
   color: #212529;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
 }
 
 ::-webkit-scrollbar {
