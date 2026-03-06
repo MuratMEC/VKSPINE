@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { MantineProvider, ColorSchemeScript, createTheme } from '@mantine/core';
+import '@mantine/core/styles.css';
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import "./globals.css";
