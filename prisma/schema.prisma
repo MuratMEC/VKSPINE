@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String
+  isActive  Boolean   @default(true)
+  products  Product[]
+}
+
+model Product {
+  id              String         @id @default(uuid())
+  sku             String?        @unique // Firma İçi / Katalog Kodu
+  barcode         String?        @unique // Evrensel Barkod
+  name            String
+  dimension       String?        // Ölçü / Boyut (Örn: 5.5 x 45mm)
+  category        Category?      @relation(fields: [categoryId], references: [id])
+  categoryId      String?
+  
+  // Resmi Kurum ve Takip Alanları (Türkiye)
+  utsCode         String?        @unique // ÜTS Barkodu / UBB
+  sutCode         String?        // SGK SUT Kodu
+  taxRate         Int            @default(20) // KDV Oranı (%10, %20 vb.)
+  
+  // Ticari Alanlar
+  brand           String?        // Marka
+  purchasePrice   Float?         // Alış Fiyatı
+  salesPrice      Float?         // Satış (Liste) Fiyatı
+  currency        String         @default("TRY") // Para Birimi
+  
+  // Stok ve Depo
+  minStockLvl     Int            @default(5)
+  isSterile       Boolean        @default(false) // Kendinden steril mi?
+  hasExpiration   Boolean        @default(true)  // SKT takibi var mı?
+  isActive        Boolean        @default(true)
+  
+  description     String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  lotSerials      LotSerial[]
+  stockMovements  StockMovement[]
+}
+
+model Supplier {
+  id             String      @id @default(uuid())
+  companyName    String
+  taxOffice      String?
+  taxNumber      String?
+  contactPerson  String?
+  phone          String?
+  email          String?
+  address        String?
+  notes          String?
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  lotSerials     LotSerial[]
+  stockMovements StockMovement[]
+}
+
+model Customer {
+  id             String      @id @default(uuid())
+  name           String
+  taxOffice      String?
+  taxNumber      String?
+  contactPerson  String?
+  phone          String?
+  email          String?
+  address        String?
+  notes          String?
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  surgeries      Surgery[]
+  stockMovements StockMovement[]
+}
+
+model LotSerial {
+  id                String          @id @default(uuid())
+  productId         String
+  product           Product         @relation(fields: [productId], references: [id])
+  lotNo             String
+  serialNo          String?
+  expDate           DateTime?
+  productionDate    DateTime?
+  supplierId        String?
+  supplier          Supplier?       @relation(fields: [supplierId], references: [id])
+  invoiceNo         String?         // Alım/Giriş Faturası Numarası
+  entryDate         DateTime        @default(now())
+  quantity          Float
+  shelfLocation     String?
+  status            String          @default("active")
+  createdAt         DateTime        @default(now())
+  stockMovements    StockMovement[]
+  surgeryLines      SurgeryLine[]
+}
+
+model StockMovement {
+  id              String      @id @default(uuid())
+  type            String      // GİRİŞ, ÇIKIŞ
+  lotId           String
+  lot             LotSerial   @relation(fields: [lotId], references: [id])
+  productId       String
+  product         Product     @relation(fields: [productId], references: [id])
+  customerId      String?
+  customer        Customer?   @relation(fields: [customerId], references: [id])
+  supplierId      String?
+  supplier        Supplier?   @relation(fields: [supplierId], references: [id])
+  quantity        Float
+  documentNo      String?     // İrsaliye/Fatura/Ameliyat No
+  notes           String?
+  createdAt       DateTime    @default(now())
+}
+
+model Surgery {
+  id             String         @id @default(uuid())
+  customerId     String?
+  customer       Customer?      @relation(fields: [customerId], references: [id])
+  doctorName     String?
+  patientName    String?
+  surgeryDate    DateTime       @default(now())
+  status         String         @default("completed")
+  notes          String?
+  surgeryLines   SurgeryLine[]
+}
+
+model SurgeryLine {
+  id           String     @id @default(uuid())
+  surgeryId    String
+  surgery      Surgery    @relation(fields: [surgeryId], references: [id])
+  lotSerialId  String
+  lotSerial    LotSerial  @relation(fields: [lotSerialId], references: [id])
+  quantity     Float
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("USER") // ADMIN, USER, VIEWER
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
