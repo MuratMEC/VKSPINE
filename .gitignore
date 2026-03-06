@@ -30,8 +30,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files - not ignored so DATABASE_URL is available on all machines
+# .env*
 
 # vercel
 .vercel

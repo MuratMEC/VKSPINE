@@ -11,8 +11,19 @@ echo Lutfen bekleyin...
 echo ===================================================
 
 echo.
-echo 1. GitHub'dan yeni kodlar cekiliyor...
-git pull origin main
+echo 1. GitHub baglantisi kontrol ediliyor...
+git status >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [BILGI] Bu klasor henuz bir Git deposu degil.
+    echo GitHub'dan son surumu indiriliyor...
+    git init
+    git remote add origin https://github.com/sefaocak/VK-Spine-Stok.git
+    git fetch origin main
+    git checkout -f origin/main
+) else (
+    echo [BILGI] Mevcut Git deposu bulundu, guncelleniyor...
+    git pull origin main
+)
 
 echo.
 echo 2. Eger yeni paketler (kutuphaneler) varsa kuruluyor...
