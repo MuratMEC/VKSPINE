@@ -11,6 +11,11 @@ echo Lutfen bekleyin...
 echo ===================================================
 
 echo.
+echo 0. Calisiyorsa uygulama kapatiliyor...
+taskkill /f /im node.exe >nul 2>&1
+echo [BILGI] Uygulama kapatildi (veya zaten kapali idi).
+
+echo.
 echo 1. GitHub baglantisi kontrol ediliyor...
 git status >nul 2>&1
 if %errorlevel% neq 0 (
