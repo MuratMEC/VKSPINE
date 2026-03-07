@@ -4,9 +4,7 @@ import { prisma } from '@/lib/prisma';
 export async function GET() {
     try {
         const suppliers = await prisma.supplier.findMany({
-            where: { isActive: true },
             orderBy: { companyName: 'asc' },
-            select: { id: true, companyName: true, contactPerson: true }
         });
 
         return NextResponse.json(suppliers);

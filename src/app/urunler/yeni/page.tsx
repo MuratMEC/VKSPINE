@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -19,6 +19,7 @@ export default function YeniUrunPage() {
     const [success, setSuccess] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
     const [categories, setCategories] = useState<{ value: string, label: string }[]>([]);
+    const [categoriesLoaded, setCategoriesLoaded] = useState(false);
 
     // Kategori Ekleme Modal State'leri
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -45,28 +46,25 @@ export default function YeniUrunPage() {
         description: ''
     });
 
-    useEffect(() => {
-        // Kategorileri yükle
-        const fetchCategories = async () => {
-            try {
-                const res = await fetch('/api/categories');
-                if (res.ok) {
-                    const data = await res.json();
-                    setCategories(data.map((c: any) => ({ value: c.id, label: c.name })));
-                } else {
-                    setCategories([]);
-                }
-            } catch (e) {
-                // If fetching from API fails, set default categories
-                setCategories([
-                    { value: '1', label: 'İmplant / Platin' },
-                    { value: '2', label: 'Cerrahi Sarf Malzemesi' },
-                    { value: '3', label: 'Cerrahi El Aletleri' }
-                ]);
+    const fetchCategories = useCallback(async () => {
+        try {
+            const res = await fetch('/api/categories');
+            if (res.ok) {
+                const data = await res.json();
+                setCategories(data.map((c: any) => ({ value: c.id, label: c.name })));
+            } else {
+                setCategories([]);
             }
-        };
-        fetchCategories();
+        } catch (e) {
+            setCategories([]);
+        } finally {
+            setCategoriesLoaded(true);
+        }
     }, []);
+
+    useEffect(() => {
+        fetchCategories();
+    }, [fetchCategories]);
 
     const handleChange = (name: string, value: any) => {
         setForm(prev => ({ ...prev, [name]: value }));
@@ -122,8 +120,14 @@ export default function YeniUrunPage() {
             });
 
             // Gerekli alan kontrolü
-            if (!reqBody.name || !form.categoryId) { // Form state üzerinden kontrol
-                throw new Error("Lütfen 'Zorunlu Alanlar' sekmesindeki Ürün Adı ve Kategori alanlarını doldurun.");
+            if (!reqBody.name) {
+                throw new Error("Lütfen 'Zorunlu Alanlar' sekmesindeki Ürün Adı alanını doldurun.");
+            }
+            if (!form.categoryId) {
+                throw new Error(categories.length === 0
+                    ? "Henüz kategori tanımlı değil. Lütfen önce '+' butonuna tıklayarak bir kategori ekleyin."
+                    : "Lütfen bir kategori seçin."
+                );
             }
             reqBody.categoryId = form.categoryId; // Silinmiş olabilme ihtimaline karşı tekrar ekle
 
@@ -228,6 +232,11 @@ export default function YeniUrunPage() {
 
                         {/* SEKME 1: TEMEL BİLGİLER */}
                         <Tabs.Panel value="temel">
+                            {categoriesLoaded && categories.length === 0 && (
+                                <Alert variant="light" color="orange" title="Kategori Bulunamadı" icon={<AlertCircle size={16} />} mb="md">
+                                    Henüz sistemde tanımlı bir kategori yok. Ürün kaydedebilmek için önce aşağıdaki <strong>"+ Yeni Kategori"</strong> butonuna tıklayarak en az bir kategori ekleyin.
+                                </Alert>
+                            )}
                             <Text fw={600} mb="md">Genel Ürün Tanıtımı</Text>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <TextInput
@@ -238,27 +247,31 @@ export default function YeniUrunPage() {
                                     onChange={(e) => handleChange('name', e.currentTarget.value)}
                                     className="md:col-span-2"
                                 />
-                                <Select
-                                    required
-                                    label="Kategori"
-                                    placeholder="Kategori seçin"
-                                    data={categories}
-                                    value={form.categoryId}
-                                    onChange={(v) => handleChange('categoryId', v)}
-                                    searchable
-                                    nothingFoundMessage="Bulunamadı"
-                                    rightSection={
-                                        <ActionIcon
-                                            size="sm"
+                                <Group align="flex-end" gap="xs" wrap="nowrap">
+                                    <Select
+                                        required
+                                        label="Kategori"
+                                        placeholder={categories.length === 0 ? "Önce kategori ekleyin →" : "Kategori seçin"}
+                                        data={categories}
+                                        value={form.categoryId}
+                                        onChange={(v) => handleChange('categoryId', v)}
+                                        searchable
+                                        nothingFoundMessage="Bulunamadı"
+                                        style={{ flex: 1 }}
+                                        error={categoriesLoaded && categories.length === 0 ? "Kategori eklenmeli" : undefined}
+                                    />
+                                    <Tooltip label="Yeni Kategori Ekle">
+                                        <Button
                                             color="blue"
-                                            variant="light"
+                                            variant={categories.length === 0 ? "filled" : "light"}
                                             onClick={() => setIsCategoryModalOpen(true)}
-                                            title="Yeni Kategori Ekle"
+                                            px="sm"
+                                            style={{ minWidth: 'auto' }}
                                         >
-                                            <PackagePlus size={14} />
-                                        </ActionIcon>
-                                    }
-                                />
+                                            <PackagePlus size={16} />
+                                        </Button>
+                                    </Tooltip>
+                                </Group>
                                 <TextInput
                                     label="Firma İçi Kod (SKU)"
                                     placeholder="İsteğe Bağlı İç Kod"
