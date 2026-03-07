@@ -22,7 +22,7 @@ if %errorlevel% neq 0 (
     echo [BILGI] Bu klasor henuz bir Git deposu degil.
     echo GitHub'dan son surumu indiriliyor...
     git init
-    git remote add origin https://github.com/sefaocak/VK-Spine-Stok.git
+    git remote add origin https://github.com/MuratMEC/VKSPINE.git
     git fetch origin main
     git checkout -f origin/main
 ) else (
