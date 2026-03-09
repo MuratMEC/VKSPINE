@@ -6,26 +6,28 @@ color 0E
 echo ===================================================
 echo   VK SPINE STOK UYGULAMASI GUNCELLEME MODU
 echo ===================================================
-echo Bu islem onceden girilen hasta/fatura/stok verilerinizi
-echo SILMEDEN sadece yazilimin arka plan kodlarini ve 
-echo veritabani tablolarini gunceller.
+echo Bu islem onceden girilen verilerinizi SILMEDEN
+echo sadece yazilimi ve veritabani yapisini gunceller.
 echo.
 echo Lutfen bekleyin...
 echo ===================================================
 
 echo.
-echo 1. Yeni paketler kontrol ediliyor...
+echo [1/3] Paketler kontrol ediliyor...
 call npm install
 
 echo.
-echo 2. Veritabani sablonu güncelleniyor (VERILER KORUNUYOR)...
+echo [2/3] Veritabani yapisi guncelleniyor...
 call npx prisma generate
-call npx prisma db push
+call npx prisma db push --accept-data-loss
+
+echo.
+echo [3/3] Onbellek temizleniyor...
+if exist .next rmdir /s /q .next
 
 echo.
 echo ===================================================
 echo GUNCELLEME ISLEMI TAMAMLANDI.
-echo Hicbir veriniz silinmedi. Simdi "2_Baslat.bat" ile
-echo sistemi yeniden acabilirsiniz.
+echo Simdi "2_Baslat.bat" ile sistemi acabilirsiniz.
 echo ===================================================
 pause

@@ -6,42 +6,43 @@ color 0B
 echo ===================================================
 echo   VK SPINE STOK UYGULAMASI GITHUB GUNCELLEME MODU
 echo ===================================================
-echo Bu islem kodlari otomatik olarak en son surume gunceller.
-echo Lutfen bekleyin...
-echo ===================================================
-
 echo.
-echo 0. Calisiyorsa uygulama kapatiliyor...
+
+:: 0. Calisiyorsa uygulama kapatiliyor
+echo [1/4] Uygulama kapatiliyor...
 taskkill /f /im node.exe >nul 2>&1
-echo [BILGI] Uygulama kapatildi (veya zaten kapali idi).
+echo [BILGI] Uygulama durduruldu.
 
+:: 1. GitHub baglantisi kontrol ediliyor
 echo.
-echo 1. GitHub baglantisi kontrol ediliyor...
+echo [2/4] GitHub baglantisi kontrol ediliyor...
 git status >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [BILGI] Bu klasor henuz bir Git deposu degil.
-    echo GitHub'dan son surumu indiriliyor...
+    echo [BILGI] Klasor henuz bir Git deposu degil. Ayarlaniyor...
     git init
     git remote add origin https://github.com/MuratMEC/VKSPINE.git
     git fetch origin main
-    git checkout -f origin/main
+    git reset --hard origin/main
 ) else (
     echo [BILGI] Mevcut Git deposu bulundu, guncelleniyor...
-    git pull origin main
+    git fetch origin main
+    git reset --hard origin/main
 )
 
+:: 2. Bagimliliklar
 echo.
-echo 2. Eger yeni paketler (kutuphaneler) varsa kuruluyor...
+echo [3/4] Yeni paketler kontrol ediliyor...
 call npm install
 
+:: 3. Veritabani
 echo.
-echo 3. Veritabani guncelleniyor...
+echo [4/4] Veritabani yapisi guncelleniyor...
 call npx prisma generate
-call npx prisma db push
+call npx prisma db push --accept-data-loss
 
 echo.
 echo ===================================================
-echo GITHUB GUNCELLEME ISLEMI TAMAMLANDI.
-echo Simdi "2_Baslat.bat" dosyasini acabilirsiniz.
+echo GUNCELLEME ISLEMI TAMAMLANDI.
+echo Artik "2_Baslat.bat" dosyasini kullanabilirsiniz.
 echo ===================================================
 pause
