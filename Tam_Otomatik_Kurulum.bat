@@ -1,27 +1,36 @@
 @echo off
+:: Karakter kodlamasini UTF-8 yap (Turkce karakterler icin)
+chcp 65001 >nul
 setlocal enabledelayedexpansion
+
+:: Dosyanin bulundugu dizine gec
 cd /d "%~dp0"
+
 title VK Spine Stok - Akilli Kurulum ve Baslatma
 color 0B
 
+echo.
 echo ===================================================
 echo     VK SPINE STOK - AKILLI KURULUM VE BASLATMA
 echo ===================================================
+echo [BILGI] Mevcut Calisma Dizini: %CD%
 echo.
 
 :: 1. Adim: Node.js Kontrolu
-echo [1/6] Node.js sistem uzerinde araniyor...
+echo [1/6] Node.js kontrol ediliyor...
 node -v >nul 2>&1
 if !errorlevel! neq 0 (
     color 0C
     echo.
     echo [HATA] Node.js bulunamadi!
+    echo Sistemde Node.js yuklu degilse kurulum devam edemez.
     echo Lutfen https://nodejs.org/ adresinden Node.js (LTS) indirip kurun.
     echo.
     pause
     exit /b 1
 ) else (
-    echo [BASARILI] Node.js bulundu.
+    for /f "tokens=*" %%i in ('node -v') do set NODE_VER=%%i
+    echo [BASARILI] Node.js bulundu: !NODE_VER!
 )
 
 :: 2. Adim: Git Kontrolu ve Repo Ayari
@@ -34,9 +43,10 @@ if !errorlevel! neq 0 (
 ) else (
     git status >nul 2>&1
     if !errorlevel! neq 0 (
-        echo [BILGI] Klasor henuz bir Git deposu degil. Ayarlaniyor...
+        echo [BILGI] Klasor henuz bir Git deposu degil. Hazirlaniyor...
         git init
         git remote add origin https://github.com/MuratMEC/VKSPINE.git
+        echo [BILGI] Dosyalar GitHub'dan senkronize ediliyor...
         git fetch origin main
         git reset --hard origin/main
     ) else (
@@ -52,22 +62,25 @@ call npm install
 if !errorlevel! neq 0 (
     color 0C
     echo.
-    echo [HATA] Paket yukleme sirasinda bir sorun olustu!
+    echo [HATA] Paket yukleme (npm install) sirasinda hata olustu!
+    echo Internet baglantinizi kontrol edin ve tekrar deneyin.
+    echo.
     pause
     exit /b 1
 ) else (
     echo [BASARILI] Paketler yuklendi.
 )
 
-:: 4. Adim: Veritabani hazirligi (Prisma generate & db push)
+:: 4. Adim: Veritabani hazirligi
 echo.
-echo [4/6] Veritabani yapisi olusturuluyor...
+echo [4/6] Veritabani yapisi (Prisma) olusturuluyor...
 call npx prisma generate
 call npx prisma db push --accept-data-loss
 if !errorlevel! neq 0 (
     color 0C
     echo.
-    echo [HATA] Veritabani hazirlanirken hata olustu!
+    echo [HATA] Veritabani hazirlanirken (Prisma) hata olustu!
+    echo.
     pause
     exit /b 1
 ) else (
@@ -76,8 +89,8 @@ if !errorlevel! neq 0 (
 
 :: 5. Adim: Seed (Ornek Veri)
 echo.
-echo [5/6] Varsayilan veriler (Yonetici vb.) kontrol ediliyor...
-call npx prisma db seed >nul 2>&1
+echo [5/6] Varsayilan veriler kontrol ediliyor...
+call npx prisma db seed
 echo [BASARILI] Veri kontrolu tamamlandi.
 
 :: 6. Adim: Baslatma
