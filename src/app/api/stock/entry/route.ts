@@ -7,9 +7,9 @@ export async function POST(request: Request) {
         const { supplierId, invoiceNo, entryDate, notes, items } = body;
 
         // Validasyon
-        if (!supplierId || !invoiceNo || !items || !Array.isArray(items) || items.length === 0) {
+        if (!supplierId || !items || !Array.isArray(items) || items.length === 0) {
             return NextResponse.json(
-                { error: 'Tedarikçi, Fatura No ve en az bir kalem ürün eklemek zorunludur.' },
+                { error: 'Tedarikçi ve en az bir kalem ürün eklemek zorunludur.' },
                 { status: 400 }
             );
         }
@@ -20,8 +20,8 @@ export async function POST(request: Request) {
             const createdMovements = [];
 
             for (const item of items) {
-                if (!item.productId || !item.quantity || !item.lotNo) {
-                    throw new Error('Ürün, Miktar ve Lot No zorunludur. (Eksik satır var)');
+                if (!item.productId || !item.quantity) {
+                    throw new Error('Ürün ve Miktar zorunludur. (Eksik satır var)');
                 }
 
                 const qty = Number(item.quantity);
@@ -29,12 +29,15 @@ export async function POST(request: Request) {
                     throw new Error('Miktar 0\'dan büyük olmalıdır.');
                 }
 
+                // lotNo yoksa otomatik oluştur
+                const lotNo = item.lotNo || `AUTO-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
                 // 1. LotSerial Kaydı (Parti Oluşturma)
                 const lot = await tx.lotSerial.create({
                     data: {
                         productId: item.productId,
                         supplierId: supplierId,
-                        lotNo: item.lotNo,
+                        lotNo: lotNo,
                         expDate: item.expDate ? new Date(item.expDate) : null,
                         invoiceNo: invoiceNo,
                         entryDate: entryDate ? new Date(entryDate) : new Date(),

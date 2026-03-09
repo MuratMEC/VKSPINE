@@ -1,36 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VK Spine MediStock
 
-## Getting Started
+Tıbbi cihaz ve cerrahi implant ürünleri için gelişmiş stok takip ve ameliyat yönetim sistemi.
 
-First, run the development server:
+## 🚀 Hızlı Başlatma (Windows)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. **Node.js**: Bilgisayarınızda [Node.js](https://nodejs.org) (LTS sürümü) kurulu olduğundan emin olun.
+2. **Kurulum**: `Tam_Otomatik_Kurulum.bat` dosyasına çift tıklayın. Bu dosya gerekli tüm paketleri yükleyecek ve sistemi başlatacaktır.
+3. **Erişim**: Tarayıcınızda [http://localhost:3000](http://localhost:3000) adresine gidin.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Giriş Bilgileri (Varsayılan):
+- **E-posta**: `admin@vkspine.com`
+- **Şifre**: `123456`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📖 Detaylı Dokümantasyon
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Sistemin tüm özellikleri, çalışma mantığı ve geliştirme detayları için [SISTEM_DOKUMANTASYONU.md](./SISTEM_DOKUMANTASYONU.md) dosyasını inceleyebilirsiniz.
 
-## Learn More
+## 🛠 Kullanılan Teknolojiler
 
-To learn more about Next.js, take a look at the following resources:
+- **Framework**: Next.js 16 (App Router)
+- **Veritabanı**: SQLite (Prisma ORM)
+- **UI**: Mantine UI + Tailwind CSS 4
+- **Auth**: iron-session + bcryptjs
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+*VK Spine MediStock — Akıllı Stok Çözümleri*

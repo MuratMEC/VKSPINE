@@ -2,22 +2,28 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import {
     Title, Text, Group, Button, Card, TextInput, NumberInput,
     Switch, Select, Tabs, Box, Divider, Alert, LoadingOverlay,
-    ActionIcon, Tooltip, Modal
+    ActionIcon, Tooltip, Modal, Center, Loader
 } from '@mantine/core';
 import {
     PackagePlus, ArrowLeft, CheckCircle, AlertCircle,
-    Info, FileText, Banknote, Package
+    Info, FileText, Banknote, Package, Edit3, Lock
 } from 'lucide-react';
 
-export default function YeniUrunPage() {
+export default function UrunDuzenlePage() {
     const router = useRouter();
+    const params = useParams();
+    const productId = params.id as string;
+
+    const [pageLoading, setPageLoading] = useState(true);
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
+    const [isLocked, setIsLocked] = useState(false);
+
     const [categories, setCategories] = useState<{ value: string, label: string }[]>([]);
     const [categoriesLoaded, setCategoriesLoaded] = useState(false);
     const [setCategories2, setSetCategories2] = useState<{ value: string, label: string }[]>([]);
@@ -46,8 +52,8 @@ export default function YeniUrunPage() {
         taxRate: 20,
         isSterile: false,
         brand: '',
-        purchasePrice: '',
-        salesPrice: '',
+        purchasePrice: '' as string | number,
+        salesPrice: '' as string | number,
         currency: 'TRY',
         minStockLvl: 5,
         hasExpiration: true,
@@ -60,8 +66,6 @@ export default function YeniUrunPage() {
             if (res.ok) {
                 const data = await res.json();
                 setCategories(data.map((c: any) => ({ value: c.id, label: c.name })));
-            } else {
-                setCategories([]);
             }
         } catch (e) {
             setCategories([]);
@@ -70,24 +74,59 @@ export default function YeniUrunPage() {
         }
     }, []);
 
-    const fetchSetCategories = useCallback(async () => {
+    const fetchProduct = useCallback(async () => {
         try {
-            const res = await fetch('/api/set-categories');
-            if (res.ok) {
+            const res = await fetch(`/api/products/${productId}`);
+            if (!res.ok) {
                 const data = await res.json();
-                setSetCategories2(data.map((c: any) => ({ value: c.id, label: c.name })));
-            } else {
-                setSetCategories2([]);
+                throw new Error(data.error || 'Ürün bulunamadı.');
             }
-        } catch (e) {
-            setSetCategories2([]);
+            const product = await res.json();
+
+            // Stok hareketi varsa kilit
+            if (product._count?.stockMovements > 0) {
+                setIsLocked(true);
+            }
+
+            setForm({
+                name: product.name || '',
+                categoryId: product.categoryId || '',
+                setCategoryId: product.setCategoryId || '',
+                sku: product.sku || '',
+                dimension: product.dimension || '',
+                barcode: product.barcode || '',
+                utsCode: product.utsCode || '',
+                sutCode: product.sutCode || '',
+                taxRate: product.taxRate ?? 20,
+                isSterile: product.isSterile ?? false,
+                brand: product.brand || '',
+                purchasePrice: product.purchasePrice ?? '',
+                salesPrice: product.salesPrice ?? '',
+                currency: product.currency || 'TRY',
+                minStockLvl: product.minStockLvl ?? 5,
+                hasExpiration: product.hasExpiration ?? true,
+                description: product.description || ''
+            });
+        } catch (e: any) {
+            setErrorMsg(e.message);
+        } finally {
+            setPageLoading(false);
         }
-    }, []);
+    }, [productId]);
 
     useEffect(() => {
         fetchCategories();
-        fetchSetCategories();
-    }, [fetchCategories, fetchSetCategories]);
+        fetchProduct();
+        // Fetch set categories
+        fetch('/api/set-categories')
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    setSetCategories2(data.map((c: any) => ({ value: c.id, label: c.name })));
+                }
+            })
+            .catch(() => setSetCategories2([]));
+    }, [fetchCategories, fetchProduct]);
 
     const handleChange = (name: string, value: any) => {
         setForm(prev => ({ ...prev, [name]: value }));
@@ -113,11 +152,8 @@ export default function YeniUrunPage() {
 
             const data = await res.json();
 
-            // Listeye ekle ve direkt seçili hale getir
             setCategories(prev => [...prev, { value: data.id, label: data.name }]);
             handleChange('categoryId', data.id);
-
-            // Modalı kapat ve sıfırla
             setIsCategoryModalOpen(false);
             setNewCategoryName("");
         } catch (error: any) {
@@ -167,27 +203,20 @@ export default function YeniUrunPage() {
 
         try {
             const reqBody = { ...form };
-            // Boş stringleri null veya undefined yapmak için temizlik
             Object.keys(reqBody).forEach(key => {
                 if (reqBody[key as keyof typeof reqBody] === '') {
                     delete reqBody[key as keyof typeof reqBody];
                 }
             });
 
-            // Gerekli alan kontrolü
             if (!reqBody.name) {
                 throw new Error("Lütfen 'Zorunlu Alanlar' sekmesindeki Ürün Adı alanını doldurun.");
             }
-            if (!form.categoryId) {
-                throw new Error(categories.length === 0
-                    ? "Henüz kategori tanımlı değil. Lütfen önce '+' butonuna tıklayarak bir kategori ekleyin."
-                    : "Lütfen bir kategori seçin."
-                );
-            }
-            reqBody.categoryId = form.categoryId; // Silinmiş olabilme ihtimaline karşı tekrar ekle
 
-            const res = await fetch('/api/products', {
-                method: 'POST',
+            reqBody.categoryId = form.categoryId || undefined as any;
+
+            const res = await fetch(`/api/products/${productId}`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(reqBody)
             });
@@ -195,12 +224,12 @@ export default function YeniUrunPage() {
             const data = await res.json();
 
             if (!res.ok) {
-                throw new Error(data.error || 'Kayıt sırasında bir hata oluştu.');
+                throw new Error(data.error || 'Güncelleme sırasında bir hata oluştu.');
             }
 
             setSuccess(true);
             setTimeout(() => {
-                router.push('/urunler'); // Başarılı olunca ürünler listesine dön
+                router.push('/urunler');
             }, 1500);
 
         } catch (error: any) {
@@ -209,6 +238,14 @@ export default function YeniUrunPage() {
             setLoading(false);
         }
     };
+
+    if (pageLoading) {
+        return (
+            <Center h={400}>
+                <Loader color="blue" type="bars" size="lg" />
+            </Center>
+        );
+    }
 
     return (
         <Box pos="relative">
@@ -223,14 +260,20 @@ export default function YeniUrunPage() {
                         <Text c="dimmed" size="sm">Ürün Yönetimine Dön</Text>
                     </Group>
                     <Group gap="sm">
-                        <PackagePlus size={24} color="var(--mantine-color-blue-6)" />
-                        <Title order={2} fw={800} c="dark.9">Yeni Cerrahi Ürün Kartı</Title>
+                        <Edit3 size={24} color="var(--mantine-color-blue-6)" />
+                        <Title order={2} fw={800} c="dark.9">Ürün Kartını Düzenle</Title>
                     </Group>
                     <Text c="dimmed" mt="xs" fw={500}>
-                        Sisteme yeni bir implant, greft, cerrahi sarf veya el aleti tanımlayın.
+                        Mevcut ürün bilgilerini güncelleyin.
                     </Text>
                 </Box>
             </Group>
+
+            {isLocked && (
+                <Alert variant="light" color="red" title="Düzenleme Kilitli" icon={<Lock size={16} />} mb="xl">
+                    Bu ürün stok hareketi (giriş/çıkış) gördüğü için düzenlenemez. Yalnızca henüz stok hareketi olmayan ürün kartları düzenlenebilir.
+                </Alert>
+            )}
 
             <Modal
                 opened={isCategoryModalOpen}
@@ -276,18 +319,14 @@ export default function YeniUrunPage() {
                 </Group>
             </Modal>
 
-            <Alert variant="light" color="blue" title="Ürün Takip Sistemi (ÜTS) Uyarısı" icon={<Info size={16} />} mb="xl">
-                Ürünlerin ÜTS (Ürün Takip Sistemi) kodu sisteme tekil olarak kaydedilir. Aynı UTS koduna sahip ikinci bir ürün kartı açılamaz. Gerçek dışı KDV oranları faturalandırmada SUT kesintilerine neden olabilir.
-            </Alert>
-
             {success && (
                 <Alert variant="light" color="teal" title="Başarılı" icon={<CheckCircle size={16} />} mb="xl">
-                    Ürün kartı veritabanına başarıyla kaydedildi! Ürün listesine yönlendiriliyorsunuz...
+                    Ürün kartı başarıyla güncellendi! Ürün listesine yönlendiriliyorsunuz...
                 </Alert>
             )}
 
             {errorMsg && (
-                <Alert variant="light" color="red" title="Kayıt Hatası" icon={<AlertCircle size={16} />} mb="xl">
+                <Alert variant="light" color="red" title="Hata" icon={<AlertCircle size={16} />} mb="xl">
                     {errorMsg}
                 </Alert>
             )}
@@ -309,11 +348,6 @@ export default function YeniUrunPage() {
 
                         {/* SEKME 1: TEMEL BİLGİLER */}
                         <Tabs.Panel value="temel">
-                            {categoriesLoaded && categories.length === 0 && (
-                                <Alert variant="light" color="orange" title="Kategori Bulunamadı" icon={<AlertCircle size={16} />} mb="md">
-                                    Henüz sistemde tanımlı bir kategori yok. Ürün kaydedebilmek için önce aşağıdaki <strong>"+ Yeni Kategori"</strong> butonuna tıklayarak en az bir kategori ekleyin.
-                                </Alert>
-                            )}
                             <Text fw={600} mb="md">Genel Ürün Tanıtımı</Text>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <TextInput
@@ -323,10 +357,10 @@ export default function YeniUrunPage() {
                                     value={form.name}
                                     onChange={(e) => handleChange('name', e.currentTarget.value)}
                                     className="md:col-span-2"
+                                    disabled={isLocked}
                                 />
                                 <Group align="flex-end" gap="xs" wrap="nowrap">
                                     <Select
-                                        required
                                         label="Kategori"
                                         placeholder={categories.length === 0 ? "Önce kategori ekleyin →" : "Kategori seçin"}
                                         data={categories}
@@ -335,7 +369,7 @@ export default function YeniUrunPage() {
                                         searchable
                                         nothingFoundMessage="Bulunamadı"
                                         style={{ flex: 1 }}
-                                        error={categoriesLoaded && categories.length === 0 ? "Kategori eklenmeli" : undefined}
+                                        disabled={isLocked}
                                     />
                                     <Tooltip label="Yeni Kategori Ekle">
                                         <Button
@@ -344,6 +378,7 @@ export default function YeniUrunPage() {
                                             onClick={() => setIsCategoryModalOpen(true)}
                                             px="sm"
                                             style={{ minWidth: 'auto' }}
+                                            disabled={isLocked}
                                         >
                                             <PackagePlus size={16} />
                                         </Button>
@@ -360,6 +395,7 @@ export default function YeniUrunPage() {
                                         clearable
                                         nothingFoundMessage="Bulunamadı"
                                         style={{ flex: 1 }}
+                                        disabled={isLocked}
                                     />
                                     <Tooltip label="Yeni Set Kategorisi Ekle">
                                         <Button
@@ -368,6 +404,7 @@ export default function YeniUrunPage() {
                                             onClick={() => setIsSetCategoryModalOpen(true)}
                                             px="sm"
                                             style={{ minWidth: 'auto' }}
+                                            disabled={isLocked}
                                         >
                                             <PackagePlus size={16} />
                                         </Button>
@@ -378,18 +415,21 @@ export default function YeniUrunPage() {
                                     placeholder="İsteğe Bağlı İç Kod"
                                     value={form.sku}
                                     onChange={(e) => handleChange('sku', e.currentTarget.value)}
+                                    disabled={isLocked}
                                 />
                                 <TextInput
                                     label="Ölçü / Boyut"
                                     placeholder="Örn: 5.5 x 45mm"
                                     value={form.dimension}
                                     onChange={(e) => handleChange('dimension', e.currentTarget.value)}
+                                    disabled={isLocked}
                                 />
                                 <TextInput
                                     label="Basit Barkod"
                                     placeholder="Dahili veya Evrensel Barkod (Varsa)"
                                     value={form.barcode}
                                     onChange={(e) => handleChange('barcode', e.currentTarget.value)}
+                                    disabled={isLocked}
                                 />
                                 <div className="md:col-span-2">
                                     <TextInput
@@ -397,6 +437,7 @@ export default function YeniUrunPage() {
                                         placeholder="Ürünle ilgili genel bir not..."
                                         value={form.description}
                                         onChange={(e) => handleChange('description', e.currentTarget.value)}
+                                        disabled={isLocked}
                                     />
                                 </div>
                             </div>
@@ -412,6 +453,7 @@ export default function YeniUrunPage() {
                                     placeholder="Örn: 8691234567890"
                                     value={form.utsCode}
                                     onChange={(e) => handleChange('utsCode', e.currentTarget.value)}
+                                    disabled={isLocked}
                                 />
                                 <TextInput
                                     label="SGK SUT Kodu"
@@ -419,19 +461,21 @@ export default function YeniUrunPage() {
                                     placeholder="Örn: ORT1023"
                                     value={form.sutCode}
                                     onChange={(e) => handleChange('sutCode', e.currentTarget.value)}
+                                    disabled={isLocked}
                                 />
                                 <Select
                                     label="KDV Oranı (%)"
                                     data={['1', '10', '20']}
                                     value={form.taxRate.toString()}
                                     onChange={(v) => handleChange('taxRate', Number(v))}
+                                    disabled={isLocked}
                                 />
 
                                 <Card withBorder radius="md" p="sm" mt="md" bg="gray.0" className="md:col-span-2">
                                     <Group justify="space-between">
                                         <Box>
                                             <Text fw={600} size="sm">Kendinden Steril Paket Mi?</Text>
-                                            <Text size="xs" c="dimmed">Ürün gamma veya EO ile steril paketlenmişse işaretleyin. (Son kullanma tarihi takibi için önemlidir).</Text>
+                                            <Text size="xs" c="dimmed">Ürün gamma veya EO ile steril paketlenmişse işaretleyin.</Text>
                                         </Box>
                                         <Switch
                                             size="lg"
@@ -439,6 +483,7 @@ export default function YeniUrunPage() {
                                             offLabel="HAYIR"
                                             checked={form.isSterile}
                                             onChange={(e) => handleChange('isSterile', e.currentTarget.checked)}
+                                            disabled={isLocked}
                                         />
                                     </Group>
                                 </Card>
@@ -455,6 +500,7 @@ export default function YeniUrunPage() {
                                     value={form.brand}
                                     onChange={(e) => handleChange('brand', e.currentTarget.value)}
                                     className="md:col-span-2"
+                                    disabled={isLocked}
                                 />
                                 <NumberInput
                                     label="Alış Fiyatı (Maliyet)"
@@ -463,6 +509,7 @@ export default function YeniUrunPage() {
                                     hideControls
                                     value={form.purchasePrice}
                                     onChange={(v) => handleChange('purchasePrice', v)}
+                                    disabled={isLocked}
                                 />
                                 <Group grow gap="xs" align="flex-end">
                                     <NumberInput
@@ -472,6 +519,7 @@ export default function YeniUrunPage() {
                                         hideControls
                                         value={form.salesPrice}
                                         onChange={(v) => handleChange('salesPrice', v)}
+                                        disabled={isLocked}
                                     />
                                     <Select
                                         label="Para Birimi"
@@ -479,6 +527,7 @@ export default function YeniUrunPage() {
                                         value={form.currency}
                                         onChange={(v) => handleChange('currency', v)}
                                         w={100}
+                                        disabled={isLocked}
                                     />
                                 </Group>
 
@@ -490,6 +539,7 @@ export default function YeniUrunPage() {
                                     min={0}
                                     value={form.minStockLvl}
                                     onChange={(v) => handleChange('minStockLvl', v === '' ? 5 : Number(v))}
+                                    disabled={isLocked}
                                 />
 
                                 <Card withBorder radius="md" p="sm" mt="md" bg="gray.0">
@@ -501,6 +551,7 @@ export default function YeniUrunPage() {
                                             size="md"
                                             checked={form.hasExpiration}
                                             onChange={(e) => handleChange('hasExpiration', e.currentTarget.checked)}
+                                            disabled={isLocked}
                                         />
                                     </Group>
                                 </Card>
@@ -514,9 +565,11 @@ export default function YeniUrunPage() {
                         <Button variant="default" component={Link} href="/urunler" disabled={loading}>
                             Vazgeç
                         </Button>
-                        <Button color="blue" type="submit" loading={loading} leftSection={<CheckCircle size={18} />}>
-                            Ürünü Kaydet
-                        </Button>
+                        {!isLocked && (
+                            <Button color="blue" type="submit" loading={loading} leftSection={<CheckCircle size={18} />}>
+                                Değişiklikleri Kaydet
+                            </Button>
+                        )}
                     </Group>
                 </Card>
             </form>

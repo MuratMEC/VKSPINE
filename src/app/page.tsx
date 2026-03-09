@@ -170,6 +170,10 @@ export default function Dashboard() {
                 dataKey="name"
                 series={[{ name: 'miktar', color: 'blue.6' }]}
                 tickLine="y"
+                tooltipProps={{
+                  contentStyle: { backgroundColor: '#1A202C', border: 'none', borderRadius: '8px', color: '#fff' },
+                  itemStyle: { color: '#fff' }
+                }}
               />
             ) : (
               <Center h={250}><Text c="dimmed">Yeterli stok çıkış verisi yok.</Text></Center>

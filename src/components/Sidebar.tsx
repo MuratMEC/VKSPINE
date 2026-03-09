@@ -42,7 +42,7 @@ export default function Sidebar() {
             path: '/stok',
             isGroup: true,
             subItems: [
-                { name: 'Stok Mevcut', path: '/stok' },
+                { name: 'Depo', path: '/stok' },
                 { name: 'Stok Giriş', path: '/stok/giris' },
                 { name: 'Stok Çıkış', path: '/stok/cikis' },
                 { name: 'Stok Hareketleri', path: '/stok/hareketler' }
@@ -83,7 +83,7 @@ export default function Sidebar() {
                 </ActionIcon>
             </Group>
 
-            <ScrollArea flex={1} type="hover" px="sm" py="md">
+            <ScrollArea flex={1} type="auto" px="sm" py="md">
                 {menuItems.map((item) => {
                     if (item.isGroup) {
                         return (

@@ -15,6 +15,10 @@ export async function GET() {
                         name: true,
                         sku: true,
                         utsCode: true,
+                        dimension: true,
+                        barcode: true,
+                        category: { select: { name: true } },
+                        setCategory: { select: { name: true } },
                     }
                 }
             },
@@ -30,10 +34,14 @@ export async function GET() {
             productId: lot.product.id,
             productName: lot.product.name,
             productUts: lot.product.utsCode,
+            productDimension: lot.product.dimension,
+            productBarcode: lot.product.barcode,
+            productCategory: lot.product.category?.name || null,
+            productSetCategory: lot.product.setCategory?.name || null,
             quantity: lot.quantity,
             expDate: lot.expDate,
             // Arama filtresi için birleşik alan
-            searchString: `${lot.product.name} ${lot.lotNo} ${lot.product.utsCode || ''}`.toLowerCase()
+            searchString: `${lot.product.name} ${lot.lotNo} ${lot.product.utsCode || ''} ${lot.product.dimension || ''} ${lot.product.barcode || ''} ${lot.product.category?.name || ''} ${lot.product.setCategory?.name || ''}`.toLowerCase()
         }));
 
         return NextResponse.json(formattedLots);

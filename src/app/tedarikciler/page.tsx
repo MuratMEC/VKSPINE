@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Building2, Plus, Upload, Search, Loader2, Trash2, Edit, AlertCircle } from 'lucide-react';
+import { Building2, Plus, Search, Loader2, Trash2, Edit, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
 interface Supplier {
@@ -99,9 +99,6 @@ export default function TedarikcilerPage() {
                     <p className="text-slate-500 mt-1">Ürün ve malzeme aldığınız ana üretici veya aracı firmalar.</p>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                    <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2">
-                        <Upload className="w-4 h-4" /> Toplu Excel Yükleme
-                    </button>
                     <Link href="/tedarikciler/yeni" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm">
                         <Plus className="w-4 h-4" /> Yeni Tedarikçi
                     </Link>
@@ -209,12 +206,13 @@ export default function TedarikcilerPage() {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <button
+                                                    <Link
+                                                        href={`/tedarikciler/${supplier.id}/duzenle`}
                                                         className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
                                                         title="Düzenle"
                                                     >
                                                         <Edit className="w-3.5 h-3.5" /> Düzenle
-                                                    </button>
+                                                    </Link>
                                                     <button
                                                         onClick={() => handleDelete(supplier.id, supplier.companyName)}
                                                         disabled={deletingId === supplier.id}

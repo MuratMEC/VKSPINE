@@ -16,18 +16,24 @@ export default function UrunlerImportPage() {
         // Örnek başlıklara sahip boş veya örnek 1-2 satırlık veri
         const templateData = [
             {
-                "utsCode": "UTS-ORNEK-001",
-                "name": "Titanyum Pedikül Vidası 5x45",
-                "brand": "MedikalA",
-                "minStockLvl": 10,
-                "hasExpiration": true
+                "utsKodu": "UTS-ORNEK-001",
+                "urunAdi": "Titanyum Pedikül Vidası",
+                "olcuBoyut": "5.5 x 45mm",
+                "marka": "MedikalA",
+                "kategori": "Omurga İmplantları",
+                "setKategori": "Posterior Servikal Set",
+                "minStokSeviyesi": 10,
+                "sktTakibi": true
             },
             {
-                "utsCode": "UTS-ORNEK-002",
-                "name": "Servikal Cage 6mm",
-                "brand": "MedikalB",
-                "minStockLvl": 5,
-                "hasExpiration": false
+                "utsKodu": "UTS-ORNEK-002",
+                "urunAdi": "Servikal Cage",
+                "olcuBoyut": "6mm",
+                "marka": "MedikalB",
+                "kategori": "Cage ve Spacer",
+                "setKategori": "Anterior Servikal Set",
+                "minStokSeviyesi": 5,
+                "sktTakibi": false
             }
         ];
 

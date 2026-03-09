@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { PackagePlus, ArrowLeft, Search, Loader2, CheckCircle, AlertCircle, Building2, Receipt, Calendar, PlusCircle, Trash2 } from 'lucide-react';
+import { PackagePlus, ArrowLeft, Search, Loader2, CheckCircle, AlertCircle, Building2, Receipt, Calendar, PlusCircle, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -18,23 +18,31 @@ export default function StokGirisPage() {
     // Üst Bilgi (Fatura / Tedarikçi) State
     const [headerData, setHeaderData] = useState({
         supplierId: '',
-        docNo: '', // invoiceNo
+        selectedSupplierName: '',
+        docNo: '', // invoiceNo (opsiyonel)
         entryDate: new Date().toISOString().split('T')[0],
         notes: ''
     });
 
-    // Satır Ekleme (Arama) State
-    const [searchTerm, setSearchTerm] = useState('');
+    // Tedarikçi Arama State
+    const [supplierSearch, setSupplierSearch] = useState('');
+    const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
+
+    // Çoklu Alan Arama State
+    const [searchFilters, setSearchFilters] = useState({
+        name: '',
+        dimension: '',
+        category: '',
+        setCategory: ''
+    });
     const [showDropdown, setShowDropdown] = useState(false);
 
     // Aktif Girilen Satır State
     const [itemData, setItemData] = useState({
         productId: '',
         selectedProductName: '',
-        lotNo: '',
-        expDate: '',
         quantity: 1,
-        purchasePrice: ''
+        expDate: '',
     });
 
     // Sepet State
@@ -54,15 +62,42 @@ export default function StokGirisPage() {
             .catch(err => console.error(err));
     }, []);
 
-    const filteredProducts = allProducts.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.utsCode?.includes(searchTerm)
+    const filteredSuppliers = allSuppliers.filter(s =>
+        s.companyName.toLowerCase().includes(supplierSearch.toLowerCase())
     );
+
+    const hasAnySearchFilter = searchFilters.name || searchFilters.dimension || searchFilters.category || searchFilters.setCategory;
+
+    const filteredProducts = allProducts.filter(p => {
+        if (!hasAnySearchFilter) return true;
+        let match = true;
+        if (searchFilters.name) {
+            const term = searchFilters.name.toLowerCase();
+            match = match && (
+                p.name.toLowerCase().includes(term) ||
+                (p.utsCode && p.utsCode.toLowerCase().includes(term)) ||
+                (p.barcode && p.barcode.toLowerCase().includes(term))
+            );
+        }
+        if (searchFilters.dimension) {
+            const term = searchFilters.dimension.toLowerCase();
+            match = match && (p.dimension && p.dimension.toLowerCase().includes(term));
+        }
+        if (searchFilters.category) {
+            const term = searchFilters.category.toLowerCase();
+            match = match && (p.category?.name && p.category.name.toLowerCase().includes(term));
+        }
+        if (searchFilters.setCategory) {
+            const term = searchFilters.setCategory.toLowerCase();
+            match = match && (p.setCategory?.name && p.setCategory.name.toLowerCase().includes(term));
+        }
+        return match;
+    });
 
     const handleAddItem = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!itemData.productId || !itemData.lotNo || itemData.quantity <= 0) {
-            setErrorMsg("Ürün seçimi, Lot No ve sıfırdan büyük Miktar zorunludur.");
+        if (!itemData.productId || itemData.quantity <= 0) {
+            setErrorMsg("Ürün seçimi ve sıfırdan büyük Miktar zorunludur.");
             return;
         }
 
@@ -78,12 +113,10 @@ export default function StokGirisPage() {
         setItemData({
             productId: '',
             selectedProductName: '',
-            lotNo: '',
-            expDate: '',
             quantity: 1,
-            purchasePrice: ''
+            expDate: '',
         });
-        setSearchTerm('');
+        setSearchFilters({ name: '', dimension: '', category: '', setCategory: '' });
     };
 
     const handleRemoveItem = (id: string) => {
@@ -91,8 +124,8 @@ export default function StokGirisPage() {
     };
 
     const handleBulkSubmit = async () => {
-        if (!headerData.supplierId || !headerData.docNo) {
-            setErrorMsg("Lütfen önce Üst Bilgi alanından Tedarikçi ve Fatura Numarasını doldurun.");
+        if (!headerData.supplierId) {
+            setErrorMsg("Lütfen önce Üst Bilgi alanından Tedarikçi seçin.");
             return;
         }
 
@@ -108,7 +141,7 @@ export default function StokGirisPage() {
         try {
             const payload = {
                 supplierId: headerData.supplierId,
-                invoiceNo: headerData.docNo,
+                invoiceNo: headerData.docNo || undefined,
                 entryDate: headerData.entryDate,
                 notes: headerData.notes,
                 items: addedItems
@@ -144,6 +177,10 @@ export default function StokGirisPage() {
         }
     };
 
+    const clearSearchFilters = () => {
+        setSearchFilters({ name: '', dimension: '', category: '', setCategory: '' });
+    };
+
     return (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="mb-6">
@@ -154,7 +191,7 @@ export default function StokGirisPage() {
                     <PackagePlus className="w-6 h-6 text-blue-600" />
                     Yeni Stok Girişi (Fatura / Mal Kabul)
                 </h1>
-                <p className="text-slate-500 mt-1">Gelen faturadaki tüm ürünleri Lot bazlı olarak tek seferde (aynı fatura altında) sisteme girin.</p>
+                <p className="text-slate-500 mt-1">Gelen faturadaki tüm ürünleri tek seferde (aynı fatura altında) sisteme girin.</p>
             </div>
 
             {success && (
@@ -173,33 +210,65 @@ export default function StokGirisPage() {
             <div className="grid grid-cols-1 gap-6">
 
                 {/* 1. ÜST BİLGİ ALANI (FATURA BAŞLIĞI) */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200">
                     <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex items-center gap-2">
                         <Receipt className="w-5 h-5 text-slate-500" />
                         <h2 className="font-semibold text-slate-800">1. Fatura ve Tedarikçi Bilgileri</h2>
                     </div>
                     <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="space-y-2">
+                        <div className="space-y-2 relative">
                             <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                                 <Building2 className="w-4 h-4 text-slate-400" />
                                 Tedarikçi Seçimi <span className="text-rose-500">*</span>
                             </label>
-                            <select
-                                value={headerData.supplierId}
-                                onChange={e => setHeaderData({ ...headerData, supplierId: e.target.value })}
-                                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
-                            >
-                                <option value="">-- Tedarikçi Seçiniz --</option>
-                                {allSuppliers.map(s => (
-                                    <option key={s.id} value={s.id}>{s.companyName}</option>
-                                ))}
-                            </select>
+                            {headerData.selectedSupplierName ? (
+                                <div className="flex items-center justify-between p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <span className="font-semibold text-blue-900 text-sm truncate pr-2">{headerData.selectedSupplierName}</span>
+                                    <button type="button" onClick={() => setHeaderData({ ...headerData, supplierId: '', selectedSupplierName: '' })} className="text-blue-600 hover:text-blue-800 font-medium text-xs whitespace-nowrap">Değiştir</button>
+                                </div>
+                            ) : (
+                                <>
+                                    <input
+                                        type="text"
+                                        value={supplierSearch}
+                                        onChange={(e) => {
+                                            setSupplierSearch(e.target.value);
+                                            setShowSupplierDropdown(true);
+                                        }}
+                                        onFocus={() => setShowSupplierDropdown(true)}
+                                        className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                                        placeholder="Tedarikçi ara ve seç..."
+                                    />
+                                    {showSupplierDropdown && (
+                                        <div className="absolute z-50 w-full mt-1 bg-white rounded-lg border border-slate-200 shadow-xl max-h-48 overflow-y-auto">
+                                            {filteredSuppliers.length > 0 ? (
+                                                filteredSuppliers.map(s => (
+                                                    <div
+                                                        key={s.id}
+                                                        onClick={() => {
+                                                            setHeaderData({ ...headerData, supplierId: s.id, selectedSupplierName: s.companyName });
+                                                            setSupplierSearch('');
+                                                            setShowSupplierDropdown(false);
+                                                        }}
+                                                        className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0"
+                                                    >
+                                                        <div className="font-semibold text-slate-900 text-sm">{s.companyName}</div>
+                                                        {s.contactPerson && <div className="text-[11px] text-slate-500 mt-0.5">{s.contactPerson}</div>}
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="p-3 text-xs text-slate-500">Sonuç bulunamadı...</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </div>
 
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                                 <Receipt className="w-4 h-4 text-slate-400" />
-                                Fatura / İrsaliye No <span className="text-rose-500">*</span>
+                                Fatura / İrsaliye No <span className="text-slate-400 text-xs">(Opsiyonel)</span>
                             </label>
                             <input
                                 value={headerData.docNo}
@@ -226,7 +295,7 @@ export default function StokGirisPage() {
                 </div>
 
                 {/* 2. SATIR (KALEM) EKLEME ALANI */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200">
                     <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <PackagePlus className="w-5 h-5 text-slate-500" />
@@ -236,84 +305,127 @@ export default function StokGirisPage() {
 
                     <div className="p-6 border-b border-slate-100 bg-slate-50/50">
                         <form onSubmit={handleAddItem} className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-
-                                {/* Ürün Arama */}
-                                <div className="md:col-span-5 relative">
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Cihaz / Malzeme <span className="text-rose-500">*</span></label>
-                                    {itemData.selectedProductName ? (
-                                        <div className="flex items-center justify-between p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
-                                            <span className="font-semibold text-blue-900 text-sm truncate pr-2">{itemData.selectedProductName}</span>
-                                            <button type="button" onClick={() => setItemData({ ...itemData, productId: '', selectedProductName: '' })} className="text-blue-600 hover:text-blue-800 font-medium text-xs whitespace-nowrap">Değiştir</button>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <input
-                                                type="text"
-                                                value={searchTerm}
-                                                onChange={(e) => {
-                                                    setSearchTerm(e.target.value);
-                                                    setShowDropdown(e.target.value.length > 0);
-                                                }}
-                                                onFocus={() => setShowDropdown(searchTerm.length > 0 || allProducts.length > 0)}
-                                                className="w-full pl-3 pr-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm outline-none"
-                                                placeholder="Ürün Ara..."
-                                            />
-                                            {showDropdown && (
-                                                <div className="absolute z-50 w-full mt-1 bg-white rounded-lg border border-slate-200 shadow-xl max-h-48 overflow-y-auto">
-                                                    {filteredProducts.length > 0 ? (
-                                                        filteredProducts.map(p => (
-                                                            <div
-                                                                key={p.id}
-                                                                onClick={() => {
-                                                                    setItemData({ ...itemData, productId: p.id, selectedProductName: p.name });
-                                                                    setSearchTerm('');
-                                                                    setShowDropdown(false);
-                                                                }}
-                                                                className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0"
-                                                            >
-                                                                <div className="font-semibold text-slate-900 text-sm">{p.name}</div>
-                                                                {p.utsCode && <div className="text-[11px] text-slate-500 font-mono mt-0.5">{p.utsCode}</div>}
-                                                            </div>
-                                                        ))
-                                                    ) : (
-                                                        <div className="p-3 text-xs text-slate-500">Sonuç bulunamadı...</div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </>
+                            {/* Çoklu Alan Arama */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="block text-xs font-semibold text-slate-600">Ürün Ara (Birden Çok Alana Göre) <span className="text-rose-500">*</span></label>
+                                    {hasAnySearchFilter && (
+                                        <button type="button" onClick={clearSearchFilters} className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1">
+                                            <X className="w-3 h-3" /> Filtreleri Temizle
+                                        </button>
                                     )}
                                 </div>
 
-                                {/* Lot No */}
-                                <div className="md:col-span-2">
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Lot / Parti No <span className="text-rose-500">*</span></label>
-                                    <input required value={itemData.lotNo} onChange={e => setItemData({ ...itemData, lotNo: e.target.value })} type="text" className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm font-mono outline-none" placeholder="LOT-XXX" />
-                                </div>
-
-                                {/* SKT */}
-                                <div className="md:col-span-2">
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">SKT</label>
-                                    <input value={itemData.expDate} onChange={e => setItemData({ ...itemData, expDate: e.target.value })} type="date" className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm outline-none" />
-                                </div>
-
-                                {/* Birim Fiyat (Opsiyonel) */}
-                                <div className="md:col-span-2">
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Alış Fiyatı (₺)</label>
-                                    <input value={itemData.purchasePrice} onChange={e => setItemData({ ...itemData, purchasePrice: e.target.value })} type="number" step="0.01" className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm outline-none" placeholder="Opsiyonel" />
-                                </div>
-
-                                {/* Miktar ve Buton */}
-                                <div className="md:col-span-1">
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Adet</label>
-                                    <div className="flex gap-2">
-                                        <input required value={itemData.quantity} onChange={e => setItemData({ ...itemData, quantity: parseInt(e.target.value) || 1 })} type="number" min="1" className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm outline-none" />
+                                {itemData.selectedProductName ? (
+                                    <div className="flex items-center justify-between p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <span className="font-semibold text-blue-900 text-sm truncate pr-2">{itemData.selectedProductName}</span>
+                                        <button type="button" onClick={() => setItemData({ ...itemData, productId: '', selectedProductName: '' })} className="text-blue-600 hover:text-blue-800 font-medium text-xs whitespace-nowrap">Değiştir</button>
                                     </div>
-                                </div>
+                                ) : (
+                                    <>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    value={searchFilters.name}
+                                                    onChange={(e) => {
+                                                        setSearchFilters({ ...searchFilters, name: e.target.value });
+                                                        setShowDropdown(true);
+                                                    }}
+                                                    onFocus={() => setShowDropdown(true)}
+                                                    className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm outline-none"
+                                                    placeholder="Ürün Adı / Barkod"
+                                                />
+                                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                                            </div>
+                                            <div>
+                                                <input
+                                                    type="text"
+                                                    value={searchFilters.dimension}
+                                                    onChange={(e) => {
+                                                        setSearchFilters({ ...searchFilters, dimension: e.target.value });
+                                                        setShowDropdown(true);
+                                                    }}
+                                                    onFocus={() => setShowDropdown(true)}
+                                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm outline-none"
+                                                    placeholder="Ölçü / Boyut"
+                                                />
+                                            </div>
+                                            <div>
+                                                <input
+                                                    type="text"
+                                                    value={searchFilters.category}
+                                                    onChange={(e) => {
+                                                        setSearchFilters({ ...searchFilters, category: e.target.value });
+                                                        setShowDropdown(true);
+                                                    }}
+                                                    onFocus={() => setShowDropdown(true)}
+                                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm outline-none"
+                                                    placeholder="Kategori"
+                                                />
+                                            </div>
+                                            <div>
+                                                <input
+                                                    type="text"
+                                                    value={searchFilters.setCategory}
+                                                    onChange={(e) => {
+                                                        setSearchFilters({ ...searchFilters, setCategory: e.target.value });
+                                                        setShowDropdown(true);
+                                                    }}
+                                                    onFocus={() => setShowDropdown(true)}
+                                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm outline-none"
+                                                    placeholder="Set Kategorisi"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {showDropdown && hasAnySearchFilter && (
+                                            <div className="bg-white rounded-lg border border-slate-200 shadow-xl max-h-48 overflow-y-auto">
+                                                {filteredProducts.length > 0 ? (
+                                                    filteredProducts.map(p => (
+                                                        <div
+                                                            key={p.id}
+                                                            onClick={() => {
+                                                                setItemData({ ...itemData, productId: p.id, selectedProductName: `${p.name}${p.dimension ? ' — ' + p.dimension : ''}` });
+                                                                setShowDropdown(false);
+                                                            }}
+                                                            className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0"
+                                                        >
+                                                            <div className="font-semibold text-slate-900 text-sm">{p.name}</div>
+                                                            <div className="flex flex-wrap gap-2 mt-0.5">
+                                                                {p.dimension && <span className="text-[11px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-medium">{p.dimension}</span>}
+                                                                {p.category?.name && <span className="text-[11px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-medium">{p.category.name}</span>}
+                                                                {p.setCategory?.name && <span className="text-[11px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded font-medium">{p.setCategory.name}</span>}
+                                                                {p.barcode && <span className="text-[11px] font-mono text-slate-500">BC: {p.barcode}</span>}
+                                                                {p.utsCode && <span className="text-[11px] font-mono text-slate-400">ÜTS: {p.utsCode}</span>}
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="p-3 text-xs text-slate-500">Sonuç bulunamadı...</div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
                             </div>
 
-                            <div className="flex justify-end pt-2">
-                                <button type="submit" disabled={!itemData.productId || !itemData.lotNo} className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center gap-2">
+                             {/* SKT ve Miktar */}
+                            <div className="flex items-end gap-4">
+                                <div className="flex-1">
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Son Kullanma Tarihi (SKT)</label>
+                                    <input 
+                                        value={itemData.expDate} 
+                                        onChange={e => setItemData({ ...itemData, expDate: e.target.value })} 
+                                        type="date" 
+                                        className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm outline-none" 
+                                    />
+                                </div>
+                                <div className="w-32">
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Adet</label>
+                                    <input required value={itemData.quantity} onChange={e => setItemData({ ...itemData, quantity: parseInt(e.target.value) || 1 })} type="number" min="1" className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm outline-none" />
+                                </div>
+                                <button type="submit" disabled={!itemData.productId} className="px-4 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center gap-2">
                                     <PlusCircle className="w-4 h-4" /> Satır Ekle
                                 </button>
                             </div>
@@ -333,9 +445,7 @@ export default function StokGirisPage() {
                                         <tr>
                                             <th className="py-3 px-4 w-10">#</th>
                                             <th className="py-3 px-4">Ürün Adı</th>
-                                            <th className="py-3 px-4">Lot No</th>
                                             <th className="py-3 px-4">SKT</th>
-                                            <th className="py-3 px-4 text-right">Fiyat</th>
                                             <th className="py-3 px-4 text-center">Miktar</th>
                                             <th className="py-3 px-4 text-right"></th>
                                         </tr>
@@ -344,10 +454,16 @@ export default function StokGirisPage() {
                                         {addedItems.map((item, index) => (
                                             <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                                                 <td className="py-3 px-4 font-medium text-slate-400">{index + 1}</td>
-                                                <td className="py-3 px-4 font-semibold text-slate-800">{item.selectedProductName}</td>
-                                                <td className="py-3 px-4 font-mono text-xs text-blue-700 bg-blue-50/50 rounded inline-block mt-2 ml-4">{item.lotNo}</td>
-                                                <td className="py-3 px-4">{item.expDate || '-'}</td>
-                                                <td className="py-3 px-4 text-right">{item.purchasePrice ? `₺${item.purchasePrice}` : '-'}</td>
+                                                 <td className="py-3 px-4 font-semibold text-slate-800">{item.selectedProductName}</td>
+                                                <td className="py-3 px-4">
+                                                    {item.expDate ? (
+                                                        <span className="text-xs font-mono bg-amber-50 text-amber-700 px-2 py-1 rounded border border-amber-100">
+                                                            {new Date(item.expDate).toLocaleDateString('tr-TR')}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-400">—</span>
+                                                    )}
+                                                </td>
                                                 <td className="py-3 px-4 text-center">
                                                     <span className="font-bold bg-slate-100 px-3 py-1 rounded-full text-slate-700">{item.quantity}</span>
                                                 </td>
@@ -365,12 +481,17 @@ export default function StokGirisPage() {
                     </div>
 
                     {/* Alt Onay Alanı */}
-                    <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3 rounded-b-xl">
-                        <button type="button" onClick={() => router.push('/stok/hareketler')} className="px-5 py-2.5 text-slate-600 bg-white border border-slate-200 rounded-lg font-medium hover:bg-slate-100 transition-colors">Vazgeç</button>
-                        <button onClick={handleBulkSubmit} disabled={loading || addedItems.length === 0} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 flex items-center gap-2">
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                            Faturayı Stoğa Al ve Kaydet
-                        </button>
+                    <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-between gap-3 rounded-b-xl">
+                        <div className="text-sm text-slate-500">
+                            {addedItems.length > 0 && <><span className="font-bold text-blue-700">{addedItems.length}</span> kalem ürün stoğa eklenecek</>}
+                        </div>
+                        <div className="flex gap-3">
+                            <button type="button" onClick={() => router.push('/stok/hareketler')} className="px-5 py-2.5 text-slate-600 bg-white border border-slate-200 rounded-lg font-medium hover:bg-slate-100 transition-colors">Vazgeç</button>
+                            <button onClick={handleBulkSubmit} disabled={loading || addedItems.length === 0} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 flex items-center gap-2">
+                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                                Faturayı Stoğa Al ve Kaydet
+                            </button>
+                        </div>
                     </div>
 
                 </div>

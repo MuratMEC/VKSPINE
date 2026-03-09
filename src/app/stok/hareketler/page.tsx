@@ -1,12 +1,19 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { SwitchCamera, Download, Filter, PieChart, Loader2, RefreshCcw } from 'lucide-react';
-import { format } from 'date-fns';
+import { SwitchCamera, Download, Filter, Loader2, RefreshCcw, Search, X, Calendar } from 'lucide-react';
+import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
+import * as XLSX from 'xlsx';
 
 export default function StokHareketleriPage() {
     const [movements, setMovements] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Filtre State
+    const [searchTerm, setSearchTerm] = useState('');
+    const [typeFilter, setTypeFilter] = useState('ALL'); // ALL | IN | OUT
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     const loadMovements = async () => {
         try {
@@ -27,6 +34,89 @@ export default function StokHareketleriPage() {
         loadMovements();
     }, []);
 
+    // İstemci taraflı filtreleme
+    const filteredMovements = movements.filter(mov => {
+        // Tip filtresi
+        if (typeFilter === 'IN' && mov.type !== 'IN') return false;
+        if (typeFilter === 'OUT' && mov.type !== 'OUT') return false;
+
+        // Tarih Aralığı Filtresi
+        if (startDate || endDate) {
+            const movDate = new Date(mov.createdAt);
+            if (startDate) {
+                const start = startOfDay(parseISO(startDate));
+                if (movDate < start) return false;
+            }
+            if (endDate) {
+                const end = endOfDay(parseISO(endDate));
+                if (movDate > end) return false;
+            }
+        }
+
+        // Arama filtresi
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            const productName = (mov.product?.name || '').toLowerCase();
+            const lotNo = (mov.lot?.lotNo || '').toLowerCase();
+            const utsCode = (mov.product?.utsCode || '').toLowerCase();
+            const docNo = (mov.documentNo || '').toLowerCase();
+            const customer = (mov.customer?.name || '').toLowerCase();
+            const supplier = (mov.supplier?.name || '').toLowerCase();
+            if (!productName.includes(term) && !lotNo.includes(term) && !utsCode.includes(term) && !docNo.includes(term) && !customer.includes(term) && !supplier.includes(term)) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    // Excel Dışa Aktarım
+    const handleExcelExport = () => {
+        if (filteredMovements.length === 0) return;
+
+        const exportData = filteredMovements.map((mov, index) => ({
+            'Sıra': index + 1,
+            'Tarih': format(new Date(mov.createdAt), 'dd.MM.yyyy HH:mm'),
+            'Ürün Adı': mov.product?.name || 'Bilinmeyen',
+            'ÜTS Kodu': mov.product?.utsCode || '',
+            'Lot No': mov.lot?.lotNo || '',
+            'İşlem Tipi': mov.type === 'OUT' ? 'ÇIKIŞ' : 'GİRİŞ',
+            'Miktar': mov.quantity,
+            'Kurum': mov.type === 'OUT' ? (mov.customer?.name || '') : (mov.supplier?.name || ''),
+            'Belge No': mov.documentNo || '',
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+        // Sütun genişlikleri
+        worksheet['!cols'] = [
+            { wch: 5 },  // Sıra
+            { wch: 18 }, // Tarih
+            { wch: 30 }, // Ürün Adı
+            { wch: 20 }, // ÜTS
+            { wch: 15 }, // Lot
+            { wch: 10 }, // Tip
+            { wch: 8 },  // Miktar
+            { wch: 25 }, // Kurum
+            { wch: 20 }, // Belge No
+        ];
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Stok Hareketleri");
+
+        const fileName = `Stok_Hareketleri_${format(new Date(), 'yyyy-MM-dd_HHmm')}.xlsx`;
+        XLSX.writeFile(workbook, fileName);
+    };
+
+    const clearFilters = () => {
+        setSearchTerm('');
+        setTypeFilter('ALL');
+        setStartDate('');
+        setEndDate('');
+    };
+
+    const hasActiveFilter = searchTerm || typeFilter !== 'ALL' || startDate || endDate;
+
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* BAŞLIK VE HIZLI EYLEMLER */}
@@ -42,42 +132,87 @@ export default function StokHareketleriPage() {
                     <button onClick={loadMovements} className="px-3 py-2 text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" title="Yenile">
                         <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
-                    <button className="px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-colors shadow-sm flex items-center gap-2">
-                        <PieChart className="w-4 h-4" /> Pivot Görünüm
-                    </button>
-                    <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors flex items-center gap-2 shadow-sm">
+                    <button
+                        onClick={handleExcelExport}
+                        disabled={filteredMovements.length === 0}
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                         <Download className="w-4 h-4" /> Excel Olarak Dışa Aktar
                     </button>
                 </div>
             </div>
 
-            {/* FİLTRE BARI (Statik Görsel) */}
-            <div className="bg-white rounded-t-xl border border-slate-200 border-b-0 p-4 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                <div className="relative">
-                    <input
-                        type="text"
-                        placeholder="Ürün Ara (İsim / Barkod)"
-                        className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                    />
+            {/* FİLTRE BARI */}
+            <div className="bg-white rounded-t-xl border border-slate-200 border-b-0 p-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                    <div className="md:col-span-1">
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">Ürün / Kurum / Belge Ara</label>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Ürün, lot, kurum..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">Hareket Tipi</label>
+                        <select
+                            value={typeFilter}
+                            onChange={(e) => setTypeFilter(e.target.value)}
+                            className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700"
+                        >
+                            <option value="ALL">Tüm Hareketler</option>
+                            <option value="IN">Sadece Girişler</option>
+                            <option value="OUT">Sadece Çıkışlar</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1 flex items-center gap-1">
+                            <Calendar className="w-3 h-3" /> Başlangıç Tarihi
+                        </label>
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1 flex items-center gap-1">
+                            <Calendar className="w-3 h-3" /> Bitiş Tarihi
+                        </label>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {hasActiveFilter && (
+                            <button
+                                onClick={clearFilters}
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors w-full justify-center"
+                            >
+                                <X className="w-4 h-4" /> Temizle
+                            </button>
+                        )}
+                        {!hasActiveFilter && (
+                             <div className="text-xs text-slate-500 ml-auto w-full text-right px-2">
+                                {filteredMovements.length} kayıt
+                            </div>
+                        )}
+                    </div>
                 </div>
-                <div>
-                    <select className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700">
-                        <option>Tüm Hareket Tipleri</option>
-                        <option>Giriş (IN)</option>
-                        <option>Çıkış (OUT)</option>
-                    </select>
-                </div>
-                <div>
-                    <input
-                        type="date"
-                        className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700"
-                    />
-                </div>
-                <div className="flex items-center justify-end">
-                    <button className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-slate-800 rounded-lg hover:bg-slate-900 w-full md:w-auto justify-center">
-                        <Filter className="w-4 h-4" /> Tümünü Filtrele
-                    </button>
-                </div>
+                {hasActiveFilter && (
+                    <div className="mt-2 text-xs text-slate-500 text-right">
+                         Filtrelenen: <strong>{filteredMovements.length}</strong> / Toplam: {movements.length} kayıt
+                    </div>
+                )}
             </div>
 
             {/* VERİ TABLOSU */}
@@ -87,11 +222,17 @@ export default function StokHareketleriPage() {
                         <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-4" />
                         <p className="text-slate-500 font-medium">Hareket Logları Veritabanından Getiriliyor...</p>
                     </div>
-                ) : movements.length === 0 ? (
+                ) : filteredMovements.length === 0 ? (
                     <div className="py-20 flex flex-col items-center justify-center text-center px-4">
                         <SwitchCamera className="w-12 h-12 text-slate-300 mb-4" />
-                        <h3 className="text-lg font-bold text-slate-900 mb-2">Henüz Bir Stok Hareketi Yok</h3>
-                        <p className="text-slate-500">Stok Giriş veya Stok Çıkış menülerinden işlem yaptığınızda tüm dökümler burada listelenecektir.</p>
+                        <h3 className="text-lg font-bold text-slate-900 mb-2">
+                            {hasActiveFilter ? 'Filtreye uygun hareket bulunamadı' : 'Henüz Bir Stok Hareketi Yok'}
+                        </h3>
+                        <p className="text-slate-500">
+                            {hasActiveFilter
+                                ? 'Arama kriterlerinizi değiştirin veya filtreleri temizleyin.'
+                                : 'Stok Giriş veya Stok Çıkış menülerinden işlem yaptığınızda tüm dökümler burada listelenecektir.'}
+                        </p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -106,7 +247,7 @@ export default function StokHareketleriPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {movements.map((mov) => {
+                                {filteredMovements.map((mov) => {
                                     const isOut = mov.type === 'OUT';
                                     return (
                                         <tr key={mov.id} className="hover:bg-slate-50 transition-colors group">
@@ -116,9 +257,11 @@ export default function StokHareketleriPage() {
                                             <td className="px-6 py-4">
                                                 <div className="font-semibold text-slate-900">{mov.product?.name || 'Bilinmeyen Ürün'}</div>
                                                 <div className="flex items-center gap-2 mt-0.5">
-                                                    <span className="text-slate-500 text-[11px] font-mono bg-slate-100 px-1 inline-block rounded">
-                                                        {mov.product?.utsCode}
-                                                    </span>
+                                                    {mov.product?.utsCode && (
+                                                        <span className="text-slate-500 text-[11px] font-mono bg-slate-100 px-1 inline-block rounded">
+                                                            {mov.product.utsCode}
+                                                        </span>
+                                                    )}
                                                     {mov.lot && (
                                                         <span className="text-slate-600 text-[11px] font-mono bg-indigo-50 border border-indigo-100 px-1 inline-block rounded">
                                                             Lot: {mov.lot.lotNo}

@@ -14,6 +14,13 @@ model Category {
   products  Product[]
 }
 
+model SetCategory {
+  id        String    @id @default(uuid())
+  name      String
+  isActive  Boolean   @default(true)
+  products  Product[]
+}
+
 model Product {
   id              String         @id @default(uuid())
   sku             String?        @unique // Firma İçi / Katalog Kodu
@@ -22,6 +29,8 @@ model Product {
   dimension       String?        // Ölçü / Boyut (Örn: 5.5 x 45mm)
   category        Category?      @relation(fields: [categoryId], references: [id])
   categoryId      String?
+  setCategory     SetCategory?   @relation(fields: [setCategoryId], references: [id])
+  setCategoryId   String?
   
   // Resmi Kurum ve Takip Alanları (Türkiye)
   utsCode         String?        @unique // ÜTS Barkodu / UBB
@@ -38,6 +47,7 @@ model Product {
   minStockLvl     Int            @default(5)
   isSterile       Boolean        @default(false) // Kendinden steril mi?
   hasExpiration   Boolean        @default(true)  // SKT takibi var mı?
+  expirationDate  DateTime?      // Sabit SKT (Opsiyonel मास्टर data alanı)
   isActive        Boolean        @default(true)
   
   description     String?

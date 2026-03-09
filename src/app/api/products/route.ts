@@ -7,7 +7,8 @@ export async function GET() {
         console.log("--> API /products GET cagrildi.");
         const products = await prisma.product.findMany({
             include: {
-                category: true, // Kategori modeli Schema.prisma'da tanimli
+                category: true,
+                setCategory: true,
             },
             orderBy: {
                 createdAt: 'desc'
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
         const {
-            name, categoryId, utsCode, sku, barcode, dimension, sutCode,
+            name, categoryId, setCategoryId, utsCode, sku, barcode, dimension, sutCode,
             taxRate, brand, purchasePrice, salesPrice, currency,
             minStockLvl, isSterile, hasExpiration, description
         } = body;
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
             data: {
                 name,
                 categoryId,
+                setCategoryId: setCategoryId || null,
                 utsCode: utsCode || null,
                 sku: sku || null,
                 barcode: barcode || null,

@@ -4,53 +4,102 @@ import { prisma } from '@/lib/prisma';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { products } = body; // Gelen JSON verisi ürün dizisi içermeli
+        const { products } = body;
 
         if (!products || !Array.isArray(products) || products.length === 0) {
             return NextResponse.json({ error: "İçe aktarılacak Excel verisi bulunamadı veya format hatalı." }, { status: 400 });
         }
 
+        // Mevcut kategorileri ve set kategorilerini çek (isim -> id eşlemesi için)
+        const existingCategories = await prisma.category.findMany();
+        const existingSetCategories = await prisma.setCategory.findMany();
+
+        const categoryMap = new Map(existingCategories.map(c => [c.name.toLowerCase(), c.id]));
+        const setCategoryMap = new Map(existingSetCategories.map(c => [c.name.toLowerCase(), c.id]));
+
         let successCount = 0;
         let skipCount = 0;
         const errors = [];
 
-        // Beklenen minimum Excel Formatı örneklemesi:
-        // [{ utsCode: '123', name: 'Platin', brand: 'X', minStockLvl: 5, hasExpiration: true }]
-
-        // Transaction (Çoklu Kayıt İşlemi) yerine for...of ile Upsert kullanıyoruz ki 
-        // varolan UBB kodlarını güncellesin, olmayanları eklesin.
         for (const prod of products) {
+            // Türkçe ve İngilizce alan adlarını destekle
+            const utsCode = prod.utsKodu || prod.utsCode;
+            const name = prod.urunAdi || prod.name;
+            const brand = prod.marka || prod.brand;
+            const dimension = prod.olcuBoyut || prod.dimension;
+            const categoryName = prod.kategori;
+            const setCategoryName = prod.setKategori;
+            const minStockLvl = prod.minStokSeviyesi || prod.minStockLvl;
+            const hasExpiration = prod.sktTakibi !== undefined ? prod.sktTakibi : prod.hasExpiration;
 
-            // Eksik satırları atla
-            if (!prod.utsCode || !prod.name) {
+            // Sadece ürün adı zorunlu — ÜTS dahil diğer tüm alanlar opsiyonel
+            if (!name) {
                 skipCount++;
-                errors.push(`Ürün Adı: ${prod.name || 'Bilinmiyor'} - Kaydedilemedi çünkü ÜTS veya İsim eksik.`);
+                errors.push(`Satır atlandı — ürün adı (urunAdi veya name) bulunamadı.`);
                 continue;
             }
 
+            // Kategori isminden ID bul, yoksa oluştur
+            let categoryId: string | null = null;
+            if (categoryName) {
+                const cKey = String(categoryName).trim().toLowerCase();
+                if (categoryMap.has(cKey)) {
+                    categoryId = categoryMap.get(cKey)!;
+                } else {
+                    const newCat = await prisma.category.create({
+                        data: { name: String(categoryName).trim(), isActive: true }
+                    });
+                    categoryMap.set(cKey, newCat.id);
+                    categoryId = newCat.id;
+                }
+            }
+
+            // Set Kategori isminden ID bul, yoksa oluştur
+            let setCategoryId: string | null = null;
+            if (setCategoryName) {
+                const scKey = String(setCategoryName).trim().toLowerCase();
+                if (setCategoryMap.has(scKey)) {
+                    setCategoryId = setCategoryMap.get(scKey)!;
+                } else {
+                    const newSetCat = await prisma.setCategory.create({
+                        data: { name: String(setCategoryName).trim(), isActive: true }
+                    });
+                    setCategoryMap.set(scKey, newSetCat.id);
+                    setCategoryId = newSetCat.id;
+                }
+            }
+
+            const productData = {
+                name: String(name).trim(),
+                brand: brand ? String(brand) : null,
+                dimension: dimension ? String(dimension) : null,
+                categoryId: categoryId,
+                setCategoryId: setCategoryId,
+                minStockLvl: minStockLvl ? parseInt(minStockLvl) : 5,
+                hasExpiration: hasExpiration !== undefined ? Boolean(hasExpiration) : true,
+            };
+
             try {
-                await prisma.product.upsert({
-                    where: { utsCode: String(prod.utsCode).trim() },
-                    update: {
-                        name: String(prod.name),
-                        brand: prod.brand ? String(prod.brand) : null,
-                        // Sayısal değerlere çevir ki veritabanı yemesin
-                        minStockLvl: prod.minStockLvl ? parseInt(prod.minStockLvl) : 5,
-                        // True/False kontrolü
-                        hasExpiration: prod.hasExpiration !== undefined ? Boolean(prod.hasExpiration) : true,
-                    },
-                    create: {
-                        utsCode: String(prod.utsCode).trim(),
-                        name: String(prod.name),
-                        brand: prod.brand ? String(prod.brand) : null,
-                        minStockLvl: prod.minStockLvl ? parseInt(prod.minStockLvl) : 5,
-                        hasExpiration: prod.hasExpiration !== undefined ? Boolean(prod.hasExpiration) : true,
-                    }
-                });
+                if (utsCode) {
+                    // ÜTS kodu varsa upsert yap (varsa güncelle, yoksa oluştur)
+                    await prisma.product.upsert({
+                        where: { utsCode: String(utsCode).trim() },
+                        update: productData,
+                        create: {
+                            ...productData,
+                            utsCode: String(utsCode).trim(),
+                        }
+                    });
+                } else {
+                    // ÜTS kodu yoksa direkt yeni kayıt oluştur
+                    await prisma.product.create({
+                        data: productData
+                    });
+                }
                 successCount++;
             } catch (err: any) {
                 skipCount++;
-                errors.push(`${prod.utsCode} kodlu ürün işlenirken hata: ${err.message}`);
+                errors.push(`Ürün "${name}" işlenirken hata: ${err.message}`);
             }
         }
 
@@ -66,3 +115,4 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Sunucu tarafında ciddi bir Excel işleme hatası oluştu." }, { status: 500 });
     }
 }
+

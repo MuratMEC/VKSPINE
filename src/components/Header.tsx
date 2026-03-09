@@ -126,7 +126,7 @@ export default function Header() {
                     {/* BILDIRIM POPOVER */}
                     <Popover opened={isNotifOpen} onChange={setIsNotifOpen} position="bottom-end" width={320} shadow="lg" offset={8}>
                         <Popover.Target>
-                            <Indicator color="red" size={10} processing disabled={totalNotifications === 0} label={totalNotifications} offset={4}>
+                            <Indicator color="red" size={10} disabled={totalNotifications === 0} label={totalNotifications} offset={4}>
                                 <ActionIcon onClick={() => setIsNotifOpen((o) => !o)} variant="subtle" color={isNotifOpen ? "blue" : "gray"} size="lg" radius="xl">
                                     <BellRing size={20} />
                                 </ActionIcon>
