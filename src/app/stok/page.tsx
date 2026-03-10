@@ -60,8 +60,8 @@ export default function StokYonetimiPage() {
             match = match && (
                 lot.productName.toLowerCase().includes(term) ||
                 lot.lotNo.toLowerCase().includes(term) ||
-                (lot.productUts && lot.productUts.toLowerCase().includes(term)) ||
-                (lot.productBarcode && lot.productBarcode.toLowerCase().includes(term))
+                !!(lot.productUts && lot.productUts.toLowerCase().includes(term)) ||
+                !!(lot.productBarcode && lot.productBarcode.toLowerCase().includes(term))
             );
         }
         if (searchFilters.dimension) {

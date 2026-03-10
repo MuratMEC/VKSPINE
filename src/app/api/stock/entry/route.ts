@@ -41,6 +41,7 @@ export async function POST(request: Request) {
                         expDate: item.expDate ? new Date(item.expDate) : null,
                         invoiceNo: invoiceNo,
                         entryDate: entryDate ? new Date(entryDate) : new Date(),
+                        initialQuantity: qty,
                         quantity: qty,
                     },
                 });
@@ -49,13 +50,12 @@ export async function POST(request: Request) {
                 // 2. StockMovement Kaydı (Tarihçe)
                 const movement = await tx.stockMovement.create({
                     data: {
-                        type: 'IN', // 'GİRİŞ' yerine Prisma enum/standart uyumu için 'IN' kullanıldı (schema uyumu)
-                        lotId: lot.id,
+                        type: 'IN',
+                        lotSerialId: lot.id,
                         productId: item.productId,
-                        supplierId: supplierId,
                         quantity: qty,
-                        documentNo: invoiceNo,
-                        notes: notes || 'Fatura ile Mal Kabul',
+                        referenceNo: invoiceNo,
+                        description: notes || 'Fatura ile Mal Kabul',
                     },
                 });
                 createdMovements.push(movement);
