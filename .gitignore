@@ -52,3 +52,6 @@ nul
 
 # temp and log files
 *.log
+
+# Database folder
+/database/

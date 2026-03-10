@@ -18,12 +18,14 @@ call npm install
 
 echo.
 echo [2/3] Veritabani yapisi guncelleniyor...
+git rm --cached dev.db prisma/prisma/dev.db prisma/dev.db 2>nul
 call npx prisma generate
 call npx prisma db push --accept-data-loss
 
 echo.
-echo [3/3] Onbellek temizleniyor...
+echo [3/3] Onbellek temizleniyor ve yeniden derleniyor...
 if exist .next rmdir /s /q .next
+call npm run build
 
 echo.
 echo ===================================================

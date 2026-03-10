@@ -21,12 +21,18 @@ svc.on('install', function() {
 // Listen for the "alreadyinstalled" event
 svc.on('alreadyinstalled', function() {
   console.log('VK Spine Stok servisi zaten kurulu.');
+  svc.start(); // Zaten kuruluysa da baslatmayı dene
 });
 
 // Listen for the "start" event
 svc.on('start', function() {
   console.log('VK Spine Stok servisi baslatildi.');
   console.log('Sistem su adreste calisiyor: http://localhost:3000');
+});
+
+// Uygulama hatası durumunda otomatik yeniden baslatma ayarları
+svc.on('error', function(err) {
+  console.error('Servis hatasi:', err);
 });
 
 svc.install();

@@ -73,6 +73,11 @@ if %ERRORLEVEL% neq 0 (
 :: 4. Adim: Veritabani
 echo.
 echo [4/6] Veritabani yapilandiriliyor...
+if not exist database mkdir database
+if exist prisma\prisma\dev.db move prisma\prisma\dev.db database\dev.db
+if exist dev.db move dev.db database\dev.db
+git rm --cached dev.db prisma/prisma/dev.db prisma/dev.db 2>nul
+
 call npx prisma generate
 call npx prisma db push --accept-data-loss
 if %ERRORLEVEL% neq 0 (
