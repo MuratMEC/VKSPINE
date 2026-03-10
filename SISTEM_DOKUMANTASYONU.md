@@ -189,6 +189,12 @@ Stok miktarı doğrudan tutulmaz. `LotSerial.quantity` alanı üzerinden hareket
 
 Tarayıcıda açın: **http://localhost:3000**
 
+### Adım 6: Otomatik Başlatma (Her Açılışta)
+Uygulamanın bilgisayar her açıldığında arka planda otomatik çalışmasını isterseniz:
+1. `OTOMATIK_BASLAT_AYARLA.bat` dosyasına çift tıklayın.
+2. Bu işlem, Windows Başlangıç klasörüne bir kısayol ekleyecektir.
+3. Artık bilgisayar her açıldığında sistem otomatik olarak çalışacak ve siz sadece tarayıcıdan adrese girerek kullanabileceksiniz.
+
 ### Adım 5: İlk Giriş
 - **E-posta:** `admin@vkspine.com`
 - **Şifre:** `123456`
