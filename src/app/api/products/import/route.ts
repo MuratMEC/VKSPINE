@@ -81,15 +81,25 @@ export async function POST(request: Request) {
 
             try {
                 if (utsCode) {
-                    // ÜTS kodu varsa upsert yap (varsa güncelle, yoksa oluştur)
-                    await prisma.product.upsert({
-                        where: { utsCode: String(utsCode).trim() },
-                        update: productData,
-                        create: {
-                            ...productData,
-                            utsCode: String(utsCode).trim(),
-                        }
+                    // ÜTS kodu varsa önce bul (utsCode unique olmadığı için upsert kullanılamaz)
+                    const cleanUtsCode = String(utsCode).trim();
+                    const existingProduct = await prisma.product.findFirst({
+                        where: { utsCode: cleanUtsCode }
                     });
+
+                    if (existingProduct) {
+                        await prisma.product.update({
+                            where: { id: existingProduct.id },
+                            data: productData
+                        });
+                    } else {
+                        await prisma.product.create({
+                            data: {
+                                ...productData,
+                                utsCode: cleanUtsCode,
+                            }
+                        });
+                    }
                 } else {
                     // ÜTS kodu yoksa direkt yeni kayıt oluştur
                     await prisma.product.create({

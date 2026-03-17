@@ -36,7 +36,7 @@ export async function GET() {
                     totalQuantity
                 };
             })
-            .filter(p => p.totalQuantity <= p.minStockLvl)
+            .filter(p => p.totalQuantity <= (p.minStockLvl ?? 5))
             // lotSerials listesini dışarı atmak isterseniz burada mapping yapabilirsiniz:
             .map(p => ({
                 id: p.id,

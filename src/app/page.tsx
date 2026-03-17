@@ -70,7 +70,7 @@ export default function Dashboard() {
     );
   }
 
-  const { stats, charts, expiringList } = data;
+  const { stats, charts, expiringList, recentMovements } = data;
 
   return (
     <Box>
@@ -170,6 +170,9 @@ export default function Dashboard() {
                 dataKey="name"
                 series={[{ name: 'miktar', color: 'blue.6' }]}
                 tickLine="y"
+                barProps={{ 
+                  activeBar: { fill: 'var(--mantine-color-blue-4)' } 
+                }}
                 tooltipProps={{
                   contentStyle: { backgroundColor: '#1A202C', border: 'none', borderRadius: '8px', color: '#fff' },
                   itemStyle: { color: '#fff' }
@@ -270,11 +273,28 @@ export default function Dashboard() {
               </Group>
 
               <Box p="md" flex={1}>
-                <Timeline active={0} bulletSize={20} lineWidth={2} color="indigo">
-                  <Timeline.Item title="Stok Hareketi" bullet={<Box w={8} h={8} bg="white" style={{ borderRadius: '50%' }} />}>
-                    <Text c="dimmed" size="sm">Bugün itibariyle veri akışı bekleniyor.</Text>
-                    <Text size="xs" mt={4} c="dimmed" tt="uppercase" fw={600}>{format(new Date(), 'dd MMM, HH:mm', { locale: tr })}</Text>
-                  </Timeline.Item>
+                <Timeline active={recentMovements.length} bulletSize={20} lineWidth={2} color="indigo">
+                  {recentMovements.length === 0 ? (
+                    <Timeline.Item title="İşlem Yok" bullet={<Box w={8} h={8} bg="white" style={{ borderRadius: '50%' }} />}>
+                      <Text c="dimmed" size="sm">Henüz bir stok hareketi bulunmuyor.</Text>
+                    </Timeline.Item>
+                  ) : (
+                    recentMovements.map((mov: any) => (
+                      <Timeline.Item 
+                        key={mov.id} 
+                        title={mov.type === 'IN' ? 'Stok Girişi' : 'Stok Çıkışı'} 
+                        bullet={<Box w={8} h={8} bg="white" style={{ borderRadius: '50%' }} />}
+                      >
+                        <Text size="sm" fw={500}>{mov.productName}</Text>
+                        <Text c="dimmed" size="xs">
+                          {mov.quantity} adet {mov.type === 'IN' ? 'alındı' : 'çıkıldı'} {mov.target ? `(${mov.target})` : ''}
+                        </Text>
+                        <Text size="xs" mt={4} c="dimmed" tt="uppercase" fw={600}>
+                          {format(new Date(mov.createdAt), 'dd MMM, HH:mm', { locale: tr })}
+                        </Text>
+                      </Timeline.Item>
+                    ))
+                  )}
                 </Timeline>
               </Box>
 

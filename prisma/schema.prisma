@@ -76,6 +76,7 @@ model Customer {
   notes         String?
   isActive      Boolean     @default(true)
   surgeries     Surgery[]
+  stockMovements StockMovement[]
 }
 
 model LotSerial {
@@ -83,7 +84,7 @@ model LotSerial {
   productId       String
   lotNo           String
   serialNo        String?
-  expDate         DateTime        @map("expirationDate")
+  expDate         DateTime?       @map("expirationDate")
   productionDate  DateTime?
   supplierId      String?
   invoiceNo       String?
@@ -109,9 +110,13 @@ model StockMovement {
   newQty      Float?
   referenceNo String?
   description String?
+  customerId  String?
+  patientName String?
+  doctorName  String?
   createdAt   DateTime  @default(now()) @map("movementDate")
   product     Product   @relation(fields: [productId], references: [id])
   lotSerial   LotSerial @relation(fields: [lotSerialId], references: [id])
+  customer    Customer? @relation(fields: [customerId], references: [id])
 }
 
 model Surgery {

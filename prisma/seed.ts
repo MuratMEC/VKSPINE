@@ -55,6 +55,7 @@ async function main() {
             lotNo: 'LOT202603',
             expDate: new Date('2028-03-01T00:00:00Z'),
             supplierId: supplier1.id,
+            initialQuantity: 100,
             quantity: 100,
             shelfLocation: 'A-12',
         },
@@ -63,12 +64,12 @@ async function main() {
     // 6. İlk Stok Hareketi (Mal Kabul)
     await prisma.stockMovement.create({
         data: {
-            lotId: lot1.id,
+            lotSerialId: lot1.id,
             productId: product1.id,
             type: 'IN',
             quantity: 100,
-            documentNo: 'FAT-2026-001',
-            notes: 'Tedarikçiden ilk giriş',
+            referenceNo: 'FAT-2026-001',
+            description: 'Tedarikçiden ilk giriş',
         },
     });
 

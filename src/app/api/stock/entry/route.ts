@@ -35,8 +35,8 @@ export async function POST(request: Request) {
                 // 1. LotSerial Kaydı (Parti Oluşturma)
                 const lot = await tx.lotSerial.create({
                     data: {
-                        productId: item.productId,
-                        supplierId: supplierId,
+                        product: { connect: { id: item.productId } },
+                        supplier: supplierId ? { connect: { id: supplierId } } : undefined,
                         lotNo: lotNo,
                         expDate: item.expDate ? new Date(item.expDate) : null,
                         invoiceNo: invoiceNo,

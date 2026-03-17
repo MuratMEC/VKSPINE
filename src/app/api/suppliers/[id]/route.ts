@@ -67,7 +67,13 @@ export async function DELETE(
 
         // Tedarikçiye bağlı lot/stok hareketi var mı kontrol et
         const relatedLots = await prisma.lotSerial.count({ where: { supplierId: id } });
-        const relatedMovements = await prisma.stockMovement.count({ where: { supplierId: id } });
+        const relatedMovements = await prisma.stockMovement.count({
+            where: {
+                lotSerial: {
+                    supplierId: id
+                }
+            }
+        });
 
         if (relatedLots > 0 || relatedMovements > 0) {
             return NextResponse.json(

@@ -78,13 +78,15 @@ export async function POST(request: Request) {
                 const movement = await tx.stockMovement.create({
                     data: {
                         type: 'OUT',
-                        lotId: item.lotSerialId,
-                        productId: currentLot.productId,
-                        customerId: customerId,
+                        lotSerial: { connect: { id: item.lotSerialId } },
+                        product: { connect: { id: currentLot.productId } },
+                        customer: { connect: { id: customerId } },
+                        patientName: patientName || null,
+                        doctorName: doctorName || null,
                         quantity: qtyToDeduct,
-                        documentNo: surgery.id, // Log'un referansını Ameliyat ID'sine bağlıyoruz
-                        notes: `Ameliyat Çıkışı (Dr. ${doctorName})`
-                    }
+                        referenceNo: surgery.id,
+                        description: `Ameliyat Çıkışı (Dr. ${doctorName})`
+                    },
                 });
                 createdMovements.push(movement);
             }

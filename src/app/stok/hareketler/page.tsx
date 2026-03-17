@@ -57,11 +57,11 @@ export default function StokHareketleriPage() {
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
             const productName = (mov.product?.name || '').toLowerCase();
-            const lotNo = (mov.lot?.lotNo || '').toLowerCase();
+            const lotNo = (mov.lotSerial?.lotNo || '').toLowerCase();
             const utsCode = (mov.product?.utsCode || '').toLowerCase();
-            const docNo = (mov.documentNo || '').toLowerCase();
-            const customer = (mov.customer?.name || '').toLowerCase();
-            const supplier = (mov.supplier?.name || '').toLowerCase();
+            const docNo = (mov.referenceNo || '').toLowerCase();
+            const customer = (mov.lotSerial?.customer?.name || '').toLowerCase();
+            const supplier = (mov.lotSerial?.supplier?.companyName || '').toLowerCase();
             if (!productName.includes(term) && !lotNo.includes(term) && !utsCode.includes(term) && !docNo.includes(term) && !customer.includes(term) && !supplier.includes(term)) {
                 return false;
             }
@@ -79,11 +79,11 @@ export default function StokHareketleriPage() {
             'Tarih': format(new Date(mov.createdAt), 'dd.MM.yyyy HH:mm'),
             'Ürün Adı': mov.product?.name || 'Bilinmeyen',
             'ÜTS Kodu': mov.product?.utsCode || '',
-            'Lot No': mov.lot?.lotNo || '',
+            'Lot No': mov.lotSerial?.lotNo || '',
             'İşlem Tipi': mov.type === 'OUT' ? 'ÇIKIŞ' : 'GİRİŞ',
             'Miktar': mov.quantity,
-            'Kurum': mov.type === 'OUT' ? (mov.customer?.name || '') : (mov.supplier?.name || ''),
-            'Belge No': mov.documentNo || '',
+            'Kurum': mov.type === 'OUT' ? (mov.lotSerial?.customer?.name || '') : (mov.lotSerial?.supplier?.companyName || ''),
+            'Belge No': mov.referenceNo || '',
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -262,9 +262,9 @@ export default function StokHareketleriPage() {
                                                             {mov.product.utsCode}
                                                         </span>
                                                     )}
-                                                    {mov.lot && (
+                                                    {mov.lotSerial && (
                                                         <span className="text-slate-600 text-[11px] font-mono bg-indigo-50 border border-indigo-100 px-1 inline-block rounded">
-                                                            Lot: {mov.lot.lotNo}
+                                                            Lot: {mov.lotSerial.lotNo}
                                                         </span>
                                                     )}
                                                 </div>
@@ -285,9 +285,19 @@ export default function StokHareketleriPage() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="text-slate-800 font-medium truncate max-w-[200px]">
-                                                    {isOut ? (mov.customer?.name || 'Belirtilmedi') : (mov.supplier?.name || 'Belirtilmedi')}
+                                                    {isOut ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold">{mov.customer?.name || 'Bilinmeyen Müşteri'}</span>
+                                                            <div className="flex flex-col gap-0.5 mt-1 border-l-2 border-indigo-100 pl-2">
+                                                                {mov.doctorName && <span className="text-[11px] text-slate-700 font-medium">Dr. {mov.doctorName}</span>}
+                                                                {mov.patientName && <span className="text-[11px] text-slate-500 italic">Hasta: {mov.patientName}</span>}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="font-medium text-emerald-700">{mov.lotSerial?.supplier?.companyName || 'Bilinmeyen Tedarikçi'}</span>
+                                                    )}
                                                 </div>
-                                                {mov.documentNo && <div className="text-slate-500 text-xs mt-0.5 font-mono">Belge: {mov.documentNo}</div>}
+                                                {mov.referenceNo && <div className="text-slate-500 text-xs mt-0.5 font-mono">Belge: {mov.referenceNo}</div>}
                                             </td>
                                         </tr>
                                     );

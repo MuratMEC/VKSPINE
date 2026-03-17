@@ -101,6 +101,16 @@ export async function GET() {
                 createdAt: { gte: startOfMonth }
             }
         });
+        // 5. Son 5 Hareket
+        const recentMovements = await prisma.stockMovement.findMany({
+            take: 5,
+            orderBy: { createdAt: 'desc' },
+            include: {
+                product: { select: { name: true } },
+                customer: { select: { name: true } },
+                lotSerial: { include: { supplier: { select: { companyName: true } } } }
+            }
+        });
 
         return NextResponse.json({
             stats: {
@@ -113,15 +123,29 @@ export async function GET() {
                 topProducts,
                 weeklyStats
             },
-            expiringList: expiringLots.map(lot => ({
-                id: lot.id,
-                productName: lot.product.name,
-                uts: lot.product.utsCode,
-                lotNo: lot.lotNo,
-                quantity: lot.quantity,
-                expDate: lot.expDate,
-                daysLeft: Math.ceil((new Date(lot.expDate as Date).getTime() - now.getTime()) / (1000 * 3600 * 24))
-            }))
+            recentMovements: recentMovements.map(m => ({
+                id: m.id,
+                type: m.type,
+                productName: m.product.name,
+                target: m.type === 'OUT' ? m.customer?.name : m.lotSerial.supplier?.companyName,
+                quantity: m.quantity,
+                createdAt: m.createdAt
+            })),
+            expiringList: expiringLots.map(lot => {
+                const daysLeft = lot.expDate 
+                    ? Math.ceil((new Date(lot.expDate).getTime() - now.getTime()) / (1000 * 3600 * 24))
+                    : 999;
+                
+                return {
+                    id: lot.id,
+                    productName: lot.product.name,
+                    uts: lot.product.utsCode,
+                    lotNo: lot.lotNo,
+                    quantity: lot.quantity,
+                    expDate: lot.expDate,
+                    daysLeft
+                };
+            })
         });
 
     } catch (error) {
