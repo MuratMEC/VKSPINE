@@ -36,9 +36,15 @@ call npm install
 
 :: 3. Veritabani
 echo.
-echo [4/4] Veritabani yapisi guncelleniyor...
+echo [4/5] Veritabani yapisi guncelleniyor...
 call npx prisma generate
 call npx prisma db push --accept-data-loss
+
+:: 4. Derleme (Build)
+echo.
+echo [5/5] Onbellek temizleniyor ve sistem yeniden derleniyor...
+if exist .next rmdir /s /q .next
+call npm run build
 
 echo.
 echo ===================================================
