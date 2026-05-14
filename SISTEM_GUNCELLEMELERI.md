@@ -21,6 +21,10 @@ Aşağıdaki tüm sayfalara tek bir arama kutusu yerine **4 ayrı filtreleme ala
 ### 4. Dashboard Görsel İyileştirmeler
 - **En Çok Çıkarılan Ürünler Grafiği**: Grafik üzerinde mouse ile gezinirken çıkan bilgi kutusunun (tooltip) tasarımı ve renkleri daha estetik (Koyu Lacivert / Premium) hale getirildi.
 
+### 5. Veri Dışa Aktarım ve Yedekleme (v1.1.0 - 14.05.2026)
+- **Excel'e Aktar (Export)**: Ürünler sayfasında görüntülenen ürünlerin, "İçe Aktar (Import)" şablonuyla %100 uyumlu bir şekilde Excel'e aktarılması sağlandı. Bu sayede toplu güncellemeler kolaylaştı.
+- **Veritabanı Yedeği Fix**: Ayarlar sayfasından veritabanının anlık bir kopyasını (`.db`) indirirken oluşan yol bulamama hatası düzeltildi.
+
 ---
 
 ## 🛡️ Kritik İş Kuralları

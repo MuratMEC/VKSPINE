@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Package, Plus, Upload, Loader2, RefreshCcw, Search, Edit, Tag, X } from 'lucide-react';
+import { Package, Plus, Upload, Loader2, RefreshCcw, Search, Edit, Tag, X, Download } from 'lucide-react';
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
 
 interface ProductWithCategory {
     id: string;
@@ -84,6 +85,26 @@ export default function UrunlerPage() {
         setSearchFilters({ name: '', dimension: '', category: '', setCategory: '' });
     };
 
+    const exportToExcel = () => {
+        // İçe aktarma şablonu formatına çevir
+        const excelData = filteredProducts.map(p => ({
+            "utsKodu": p.utsCode || "",
+            "urunAdi": p.name || "",
+            "olcuBoyut": p.dimension || "",
+            "marka": p.brand || "",
+            "kategori": p.category?.name || "",
+            "setKategori": p.setCategory?.name || "",
+            "minStokSeviyesi": p.minStockLvl || 5,
+            "sktTakibi": p.hasExpiration
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Urunler");
+
+        XLSX.writeFile(workbook, "MediStock_Urunler_Disa_Aktarim.xlsx");
+    };
+
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -97,6 +118,9 @@ export default function UrunlerPage() {
                 <div className="flex flex-wrap gap-3">
                     <button onClick={loadProducts} className="px-3 py-2 text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" title="Yenile">
                         <RefreshCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    </button>
+                    <button onClick={exportToExcel} className="px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-100 transition-colors shadow-sm flex items-center gap-2" title="Görüntülenen ürünleri Excel'e aktar">
+                        <Download className="w-4 h-4" /> Excel'e Aktar
                     </button>
                     <Link href="/urunler/import" className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2">
                         <Upload className="w-4 h-4" /> Excel'den İçe Aktar

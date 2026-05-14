@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import path from 'path';
 
 export async function GET() {
     try {
-        // SQLite dosyasının bulunduğu yol (dev.db)
-        const dbPath = path.join(process.cwd(), 'prisma', 'dev.db');
+        // Öncelikle yeni dizinde ara (database/dev.db)
+        let dbPath = path.join(process.cwd(), 'database', 'dev.db');
+
+        // Bulamazsa eski dizine (prisma/dev.db) bak (Geriye dönük uyumluluk)
+        if (!existsSync(dbPath)) {
+            dbPath = path.join(process.cwd(), 'prisma', 'dev.db');
+        }
 
         // Dosyayı oku
         const dbBuffer = readFileSync(dbPath);
