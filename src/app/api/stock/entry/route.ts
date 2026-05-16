@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/session';
 
 export async function POST(request: Request) {
     try {
+        const session = await getSession();
         const body = await request.json();
         const { supplierId, invoiceNo, entryDate, notes, items } = body;
 
@@ -53,6 +55,7 @@ export async function POST(request: Request) {
                         type: 'IN',
                         lotSerialId: lot.id,
                         productId: item.productId,
+                        userId: session.userId || undefined,
                         quantity: qty,
                         referenceNo: invoiceNo,
                         description: notes || 'Fatura ile Mal Kabul',

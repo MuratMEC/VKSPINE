@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Package, Plus, Loader2, RefreshCcw, Search, ArrowRightToLine, AlertTriangle, X } from 'lucide-react';
+import { Package, Plus, Loader2, RefreshCcw, Search, ArrowRightToLine, AlertTriangle, X, Printer } from 'lucide-react';
 import Link from 'next/link';
+import LabelPrintModal from '@/components/LabelPrintModal';
 
 interface LotItem {
     id: string;
@@ -21,6 +22,7 @@ interface LotItem {
 export default function StokYonetimiPage() {
     const [lots, setLots] = useState<LotItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [printingLot, setPrintingLot] = useState<LotItem | null>(null);
 
     // Çoklu Alan Arama
     const [searchFilters, setSearchFilters] = useState({
@@ -99,6 +101,7 @@ export default function StokYonetimiPage() {
     };
 
     return (
+        <>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
@@ -219,6 +222,7 @@ export default function StokYonetimiPage() {
                                     <th className="px-6 py-4">SKT</th>
                                     <th className="px-6 py-4">Barkod</th>
                                     <th className="px-6 py-4 text-center">Stok Adedi</th>
+                                    <th className="px-6 py-4 text-center">Etiket</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -264,6 +268,15 @@ export default function StokYonetimiPage() {
                                                     {lot.quantity}
                                                 </span>
                                             </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <button
+                                                    onClick={() => setPrintingLot(lot)}
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                                                    title="Etiket Yazdır"
+                                                >
+                                                    <Printer className="w-3.5 h-3.5" /> Etiket
+                                                </button>
+                                            </td>
                                         </tr>
                                     );
                                 })}
@@ -276,5 +289,14 @@ export default function StokYonetimiPage() {
                 </div>
             )}
         </div>
+
+        {/* ETİKET YAZDIR MODALİ */}
+        {printingLot && (
+            <LabelPrintModal
+                lot={printingLot}
+                onClose={() => setPrintingLot(null)}
+            />
+        )}
+        </>
     );
 }

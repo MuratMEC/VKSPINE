@@ -55,28 +55,8 @@ export default function Header() {
 
 
     return (
-        <Box
-            component="header"
-            h={64}
-            px="md"
-            bg="white"
-            style={{ borderBottom: '1px solid #E9ECEF', position: 'sticky', top: 0, zIndex: 40 }}
-        >
-            <Group h="100%" justify="space-between" wrap="nowrap">
-                <Group display={{ base: 'flex', sm: 'none' }} wrap="nowrap">
-                    <Link href="/">
-                        <ActionIcon variant="gradient" gradient={{ from: 'blue', to: 'indigo', deg: 90 }} size="lg" radius="md">
-                            <Activity size={20} />
-                        </ActionIcon>
-                    </Link>
-                    <Title order={3} style={{ background: 'linear-gradient(90deg, #1d4ed8, #4338ca)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        MediStock
-                    </Title>
-                </Group>
-
-                <Box display={{ base: 'none', sm: 'block' }} style={{ flex: 1 }} />
-
-                <Group gap="md" wrap="nowrap">
+        <Group justify="flex-end" h="100%" w="100%">
+            <Group gap="md" wrap="nowrap">
 
                     {/* ARAMA POPOVER */}
                     <Popover opened={isSearchOpen} position="bottom-end" width={400} shadow="md" offset={4}>
@@ -179,7 +159,6 @@ export default function Header() {
                     </Popover>
 
                 </Group>
-            </Group>
-        </Box>
+        </Group>
     );
 }

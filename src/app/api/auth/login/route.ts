@@ -48,7 +48,8 @@ export async function POST(request: Request) {
         const session = await getSession();
         session.isLoggedIn = true;
         session.username = user.name;
-        // @ts-ignore - session type doesn't have role yet, but wait, session type in lib/session.ts might not accept custom fields easily. I'll just use what's there.
+        session.userId = user.id;
+        session.role = user.role;
         await session.save();
 
         return NextResponse.json({ success: true });

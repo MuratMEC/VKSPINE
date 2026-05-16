@@ -74,7 +74,7 @@ export default function StokHareketleriPage() {
     const handleExcelExport = () => {
         if (filteredMovements.length === 0) return;
 
-        const exportData = filteredMovements.map((mov, index) => ({
+        const exportData = filteredMovements.map((mov: any, index: number) => ({
             'Sıra': index + 1,
             'Tarih': format(new Date(mov.createdAt), 'dd.MM.yyyy HH:mm'),
             'Ürün Adı': mov.product?.name || 'Bilinmeyen',
@@ -82,8 +82,9 @@ export default function StokHareketleriPage() {
             'Lot No': mov.lotSerial?.lotNo || '',
             'İşlem Tipi': mov.type === 'OUT' ? 'ÇIKIŞ' : 'GİRİŞ',
             'Miktar': mov.quantity,
-            'Kurum': mov.type === 'OUT' ? (mov.lotSerial?.customer?.name || '') : (mov.lotSerial?.supplier?.companyName || ''),
+            'Kurum': mov.type === 'OUT' ? (mov.customer?.name || '') : (mov.lotSerial?.supplier?.companyName || ''),
             'Belge No': mov.referenceNo || '',
+            'İşlemi Yapan': mov.user?.name || 'Bilinmiyor',
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -99,6 +100,7 @@ export default function StokHareketleriPage() {
             { wch: 8 },  // Miktar
             { wch: 25 }, // Kurum
             { wch: 20 }, // Belge No
+            { wch: 20 }, // İşlemi Yapan
         ];
 
         const workbook = XLSX.utils.book_new();
@@ -244,6 +246,7 @@ export default function StokHareketleriPage() {
                                     <th className="px-6 py-4">İşlem Tipi</th>
                                     <th className="px-6 py-4">Miktar</th>
                                     <th className="px-6 py-4">İlgili Kurum / Belge No</th>
+                                    <th className="px-6 py-4">İşlemi Yapan</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -298,6 +301,15 @@ export default function StokHareketleriPage() {
                                                     )}
                                                 </div>
                                                 {mov.referenceNo && <div className="text-slate-500 text-xs mt-0.5 font-mono">Belge: {mov.referenceNo}</div>}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {mov.user ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                                        {mov.user.name}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-slate-400 text-xs">—</span>
+                                                )}
                                             </td>
                                         </tr>
                                     );

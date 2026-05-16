@@ -1,18 +1,34 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/session';
 
 export async function POST(request: Request) {
     try {
+        const session = await getSession();
         const body = await request.json();
-        const { customerId, doctorName, patientName, surgeryDate, notes, items } = body;
+        const { 
+            customerId, 
+            doctorName, 
+            patientName, 
+            surgeryDate, 
+            notes, 
+            items,
+            city,
+            hospitalName,
+            personnelIds, // Array of IDs
+            deviceIds     // Array of IDs
+        } = body;
 
-        // Validasyon
-        if (!customerId || !doctorName || !items || !Array.isArray(items) || items.length === 0) {
+        // Validasyon: Planlama için müşteri ve doktor yeterli, stok düşülecekse ürün zorunlu.
+        if (!customerId || !doctorName) {
             return NextResponse.json(
-                { error: 'Müşteri (Hastane/Bayi), Doktor ve en az bir adet malzeme girmek zorunludur.' },
+                { error: 'Müşteri (Hastane/Bayi) ve Doktor girmek zorunludur.' },
                 { status: 400 }
             );
         }
+
+        // Eğer ürün yoksa ve sadece planlama yapılıyorsa izin ver
+        const hasItems = items && Array.isArray(items) && items.length > 0;
 
         // Atomik işlem: Ya ameliyat tamamen düşer ya da hata anında iptal olur.
         const result = await prisma.$transaction(async (tx) => {
@@ -21,74 +37,96 @@ export async function POST(request: Request) {
                 data: {
                     customerId,
                     doctorName,
+                    userId: session.userId || undefined,
                     patientName: patientName || null,
                     surgeryDate: surgeryDate ? new Date(surgeryDate) : new Date(),
                     notes: notes || 'Ameliyat Çıkışı',
-                    status: 'completed'
+                    status: 'completed',
+                    city: city || null,
+                    hospitalName: hospitalName || null,
+                    // Personel bağlantısı
+                    personnel: personnelIds && personnelIds.length > 0 ? {
+                        connect: personnelIds.map((id: string) => ({ id }))
+                    } : undefined,
+                    // Cihaz bağlantısı
+                    devices: deviceIds && deviceIds.length > 0 ? {
+                        connect: deviceIds.map((id: string) => ({ id }))
+                    } : undefined,
                 }
             });
+
+            // Cihazları "Ameliyatta" (BUSY) olarak işaretle
+            if (deviceIds && deviceIds.length > 0) {
+                await tx.device.updateMany({
+                    where: { id: { in: deviceIds } },
+                    data: { status: 'BUSY' }
+                });
+            }
 
             const createdLines = [];
             const createdMovements = [];
 
             // 2. Her bir kullanılan Lot için döngü
-            for (const item of items) {
-                if (!item.lotSerialId || !item.quantity) {
-                    throw new Error('Ürün Lot seçimi ve Miktar zorunludur.');
-                }
-
-                const qtyToDeduct = Number(item.quantity);
-                if (qtyToDeduct <= 0) {
-                    throw new Error('Düşülecek miktar 0\'dan büyük olmalıdır.');
-                }
-
-                // Mevcut Lot durumunu kontrol et (stok var mı?)
-                const currentLot = await tx.lotSerial.findUnique({
-                    where: { id: item.lotSerialId },
-                    include: { product: true }
-                });
-
-                if (!currentLot) {
-                    throw new Error(`Lot kaydı bulunamadı (ID: ${item.lotSerialId}).`);
-                }
-
-                if (currentLot.quantity < qtyToDeduct) {
-                    throw new Error(`Yetersiz stok! ${currentLot.product.name} (Lot: ${currentLot.lotNo}) için mevcut stok ${currentLot.quantity}, fakat siz ${qtyToDeduct} çıkış yapmak istediniz.`);
-                }
-
-                // A. Lot'tan miktarı düş
-                await tx.lotSerial.update({
-                    where: { id: item.lotSerialId },
-                    data: {
-                        quantity: currentLot.quantity - qtyToDeduct
+            if (hasItems) {
+                for (const item of items) {
+                    if (!item.lotSerialId || !item.quantity) {
+                        throw new Error('Ürün Lot seçimi ve Miktar zorunludur.');
                     }
-                });
 
-                // B. SurgeryLine (Ameliyatın içindeki kalem bağlantısı)
-                const line = await tx.surgeryLine.create({
-                    data: {
-                        surgeryId: surgery.id,
-                        lotSerialId: item.lotSerialId,
-                        quantity: qtyToDeduct
+                    const qtyToDeduct = Number(item.quantity);
+                    if (qtyToDeduct <= 0) {
+                        throw new Error('Düşülecek miktar 0\'dan büyük olmalıdır.');
                     }
-                });
-                createdLines.push(line);
 
-                // C. StockMovement (Log - Çıkış Miktarı)
-                const movement = await tx.stockMovement.create({
-                    data: {
-                        type: 'OUT',
-                        lotSerial: { connect: { id: item.lotSerialId } },
-                        product: { connect: { id: currentLot.productId } },
-                        customer: { connect: { id: customerId } },
-                        patientName: patientName || null,
-                        doctorName: doctorName || null,
-                        quantity: qtyToDeduct,
-                        referenceNo: surgery.id,
-                        description: `Ameliyat Çıkışı (Dr. ${doctorName})`
-                    },
-                });
-                createdMovements.push(movement);
+                    // Mevcut Lot durumunu kontrol et (stok var mı?)
+                    const currentLot = await tx.lotSerial.findUnique({
+                        where: { id: item.lotSerialId },
+                        include: { product: true }
+                    });
+
+                    if (!currentLot) {
+                        throw new Error(`Lot kaydı bulunamadı (ID: ${item.lotSerialId}).`);
+                    }
+
+                    if (currentLot.quantity < qtyToDeduct) {
+                        throw new Error(`Yetersiz stok! ${currentLot.product.name} (Lot: ${currentLot.lotNo}) için mevcut stok ${currentLot.quantity}, fakat siz ${qtyToDeduct} çıkış yapmak istediniz.`);
+                    }
+
+                    // A. Lot'tan miktarı düş
+                    await tx.lotSerial.update({
+                        where: { id: item.lotSerialId },
+                        data: {
+                            quantity: currentLot.quantity - qtyToDeduct
+                        }
+                    });
+
+                    // B. SurgeryLine (Ameliyatın içindeki kalem bağlantısı)
+                    const line = await tx.surgeryLine.create({
+                        data: {
+                            surgeryId: surgery.id,
+                            lotSerialId: item.lotSerialId,
+                            quantity: qtyToDeduct
+                        }
+                    });
+                    createdLines.push(line);
+
+                    // C. StockMovement (Log - Çıkış Miktarı)
+                    const movement = await tx.stockMovement.create({
+                        data: {
+                            type: 'OUT',
+                            userId: session.userId || undefined,
+                            lotSerial: { connect: { id: item.lotSerialId } },
+                            product: { connect: { id: currentLot.productId } },
+                            customer: { connect: { id: customerId } },
+                            patientName: patientName || null,
+                            doctorName: doctorName || null,
+                            quantity: qtyToDeduct,
+                            referenceNo: surgery.id,
+                            description: `Ameliyat Çıkışı (Dr. ${doctorName})`
+                        },
+                    });
+                    createdMovements.push(movement);
+                }
             }
 
             return { surgery, createdLines, createdMovements };

@@ -24,7 +24,8 @@ export default function Dashboard() {
     showStats: true,
     showCharts: true,
     showExpiring: true,
-    showRecent: true
+    showRecent: true,
+    showOperations: true
   });
 
   useEffect(() => {
@@ -70,7 +71,7 @@ export default function Dashboard() {
     );
   }
 
-  const { stats, charts, expiringList, recentMovements } = data;
+  const { stats, charts, expiringList, recentMovements, todaySurgeries } = data;
 
   return (
     <Box>
@@ -141,18 +142,79 @@ export default function Dashboard() {
             </Group>
           </Card>
 
-          <Card padding="lg" radius="md">
+          <Card padding="lg" radius="md" component={Link} href="/ameliyatlar" style={{ cursor: 'pointer' }}>
             <Group justify="space-between" align="flex-start" mb="sm">
               <Box>
-                <Text size="sm" fw={600} c="dimmed">Aktif Kurumlar</Text>
-                <Title order={3} fw={700} mt="xs">{stats.hospitals}</Title>
+                <Text size="sm" fw={600} c="dimmed">Günün Ameliyatları</Text>
+                <Title order={3} fw={700} mt="xs">{stats.todaySurgeriesCount}</Title>
               </Box>
-              <ThemeIcon color="orange.1" c="orange.6" size="xl" radius="md">
-                <Building2 size={24} />
+              <ThemeIcon color="rose.1" c="rose.6" size="xl" radius="md">
+                <Activity size={24} />
               </ThemeIcon>
             </Group>
+            <Text size="xs" c="dimmed" mt="xs">Bugün planlanan toplam vaka</Text>
+          </Card>
+
+          <Card padding="lg" radius="md" component={Link} href="/ameliyatlar" style={{ cursor: 'pointer' }}>
+            <Group justify="space-between" align="flex-start" mb="sm">
+              <Box>
+                <Text size="sm" fw={600} c="dimmed">Sahadaki Ekip</Text>
+                <Title order={3} fw={700} mt="xs">{stats.busyPersonnel}</Title>
+              </Box>
+              <ThemeIcon color="blue.1" c="blue.6" size="xl" radius="md">
+                <Users size={24} />
+              </ThemeIcon>
+            </Group>
+            <Text size="xs" c="dimmed" mt="xs">Şu an aktif görevdeki personel</Text>
           </Card>
         </SimpleGrid>
+      )}
+
+      {/* GÜNÜN OPERASYONLARI VE SAHA DURUMU */}
+      {prefs.showOperations && (
+        <Card padding={0} radius="md" mb="lg">
+            <Group justify="space-between" p="md" bg="rose.0" style={{ borderBottom: '1px solid #FFE4E6' }}>
+                <Group gap="sm">
+                    <Activity size={20} color="var(--mantine-color-rose-6)" />
+                    <Text fw={700} c="rose.9">Günün Operasyonları ve Saha Durumu</Text>
+                </Group>
+                <Anchor component={Link} href="/ameliyatlar" size="sm" fw={600} c="rose.7">
+                    Tüm Planı Gör
+                </Anchor>
+            </Group>
+            <Box p="md">
+                {todaySurgeries && todaySurgeries.length > 0 ? (
+                    <SimpleGrid cols={{ base: 1, md: 2, lg: 3 }} spacing="md">
+                        {todaySurgeries.map((s: any) => (
+                            <Box key={s.id} p="sm" style={{ border: '1px solid #F1F5F9', borderRadius: '12px', backgroundColor: '#F8FAFC' }}>
+                                <Group justify="space-between" mb="xs">
+                                    <Text fw={700} size="sm">Dr. {s.doctor}</Text>
+                                    <Badge size="xs" color="rose">BUGÜN</Badge>
+                                </Group>
+                                <Group gap="xs" mb="xs">
+                                    <Building2 size={12} color="#64748B" />
+                                    <Text size="xs" c="slate.7" fw={500}>{s.hospital}</Text>
+                                </Group>
+                                <Stack gap={4}>
+                                    <Group gap="xs">
+                                        <Users size={12} color="#3B82F6" />
+                                        <Text size="xs" c="blue.7" fw={600}>{s.personnel.join(', ') || 'Ekip atanmamış'}</Text>
+                                    </Group>
+                                    <Group gap="xs">
+                                        <Settings2 size={12} color="#6366F1" />
+                                        <Text size="xs" c="indigo.7" fw={600}>{s.devices.join(', ') || 'Cihaz atanmamış'}</Text>
+                                    </Group>
+                                </Stack>
+                            </Box>
+                        ))}
+                    </SimpleGrid>
+                ) : (
+                    <Center py="xl">
+                        <Text c="dimmed" size="sm" italic>Bugün için henüz planlanmış bir operasyon kaydı bulunmuyor.</Text>
+                    </Center>
+                )}
+            </Box>
+        </Card>
       )}
 
       {/* GRAFİKLER BÖLÜMÜ */}
@@ -179,7 +241,14 @@ export default function Dashboard() {
                 }}
               />
             ) : (
-              <Center h={250}><Text c="dimmed">Yeterli stok çıkış verisi yok.</Text></Center>
+              <Center h={250}>
+                <Stack align="center" gap="xs">
+                  <ThemeIcon size="xl" radius="xl" variant="light" color="gray">
+                    <TrendingUp size={24} color="var(--mantine-color-gray-5)" />
+                  </ThemeIcon>
+                  <Text c="dimmed" size="sm" fw={500}>Yeterli stok çıkış verisi yok.</Text>
+                </Stack>
+              </Center>
             )}
           </Card>
 
@@ -202,105 +271,114 @@ export default function Dashboard() {
                 tickLine="x"
               />
             ) : (
-              <Center h={250}><Text c="dimmed">Haftalık veri bulunamadı.</Text></Center>
+              <Center h={250}>
+                <Stack align="center" gap="xs">
+                  <ThemeIcon size="xl" radius="xl" variant="light" color="gray">
+                    <Activity size={24} color="var(--mantine-color-gray-5)" />
+                  </ThemeIcon>
+                  <Text c="dimmed" size="sm" fw={500}>Haftalık veri bulunamadı.</Text>
+                </Stack>
+              </Center>
             )}
           </Card>
         </SimpleGrid>
       )}
 
-      {/* ALT BÖLÜM: YAKLAŞAN SKT VE AMELIYATLAR */}
+      {/* ALT BÖLÜM: YAKLAŞAN SKT VE SON İŞLEMLER */}
       {((prefs.showExpiring || prefs.showRecent) &&
-        <SimpleGrid cols={{ base: 1, lg: (prefs.showExpiring && prefs.showRecent) ? 3 : 1 }} spacing="md">
+        <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md">
           {prefs.showExpiring && (
-            <Card padding={0} radius="md" style={{ gridColumn: (prefs.showExpiring && prefs.showRecent) ? 'lg / span 2' : 'auto' }}>
-              <Group justify="space-between" p="md" bg="gray.0" style={{ borderBottom: '1px solid #E9ECEF' }}>
+            <Card padding={0} radius="md" shadow="sm" style={{ border: '1px solid #E2E8F0' }}>
+              <Group justify="space-between" p="md" bg="gray.0" style={{ borderBottom: '1px solid #E2E8F0' }}>
                 <Group gap="sm">
                   <Clock size={20} color="var(--mantine-color-orange-5)" />
-                  <Text fw={700}>Yaklaşan Son Kullanım Tarihleri (SKT)</Text>
+                  <Text fw={700}>Yaklaşan SKT Alarmları</Text>
                 </Group>
-                <Anchor component={Link} href="#" size="sm" fw={500} display="flex" style={{ alignItems: 'center', gap: 4 }}>
-                  Tümünü Gör <ChevronRight size={14} />
+                <Anchor component={Link} href="/skt-alarmlari" size="sm" fw={600}>
+                  Tümünü Gör
                 </Anchor>
               </Group>
 
-              <Table verticalSpacing="sm" horizontalSpacing="md" striped="even">
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Ürün Adı & Kodu</Table.Th>
-                    <Table.Th>Lot Numarası</Table.Th>
-                    <Table.Th>Kalan Miktar</Table.Th>
-                    <Table.Th ta="right">SKT Tarihi</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {expiringList.length === 0 ? (
+              <Box style={{ overflowX: 'auto' }}>
+                <Table verticalSpacing="sm" horizontalSpacing="md" striped>
+                  <Table.Thead>
                     <Table.Tr>
-                      <Table.Td colSpan={4} align="center" py="xl">
-                        <Text c="dimmed">90 günden az SKT'si kalmış ürün bulunmamaktadır.</Text>
-                      </Table.Td>
+                      <Table.Th>Ürün</Table.Th>
+                      <Table.Th>Lot</Table.Th>
+                      <Table.Th ta="right">Durum</Table.Th>
                     </Table.Tr>
-                  ) : (
-                    expiringList.map((lot: any) => (
-                      <Table.Tr key={lot.id}>
-                        <Table.Td>
-                          <Text fw={500} size="sm">{lot.productName}</Text>
-                          <Text size="xs" c="dimmed">{lot.uts}</Text>
-                        </Table.Td>
-                        <Table.Td>
-                          <Badge variant="default" radius="sm" ff="monospace">{lot.lotNo}</Badge>
-                        </Table.Td>
-                        <Table.Td>
-                          <Text fw={500} size="sm">{lot.quantity} Birim</Text>
-                        </Table.Td>
-                        <Table.Td ta="right">
-                          <Badge color={lot.daysLeft < 30 ? "red" : "orange"} variant="light" size="lg" radius="xl">
-                            {lot.daysLeft} Gün Kaldı
-                          </Badge>
-                        </Table.Td>
-                      </Table.Tr>
-                    ))
-                  )}
-                </Table.Tbody>
-              </Table>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {expiringList.length === 0 ? (
+                      <Table.Tr><Table.Td colSpan={3} align="center" py="xl"><Text c="dimmed">Kritik ürün yok.</Text></Table.Td></Table.Tr>
+                    ) : (
+                      expiringList.map((lot: any) => (
+                        <Table.Tr key={lot.id}>
+                          <Table.Td>
+                            <Text fw={600} size="sm" truncate maxWidth={200}>{lot.productName}</Text>
+                          </Table.Td>
+                          <Table.Td>
+                            <Badge variant="outline" color="gray" size="xs">{lot.lotNo}</Badge>
+                          </Table.Td>
+                          <Table.Td ta="right">
+                            <Badge color={lot.daysLeft < 30 ? "red" : "orange"} variant="light" radius="xl">
+                              {lot.daysLeft} Gün
+                            </Badge>
+                          </Table.Td>
+                        </Table.Tr>
+                      ))
+                    )}
+                  </Table.Tbody>
+                </Table>
+              </Box>
             </Card>
           )}
 
           {prefs.showRecent && (
-            <Card padding={0} radius="md" style={{ display: 'flex', flexDirection: 'column' }}>
-              <Group p="md" bg="gray.0" style={{ borderBottom: '1px solid #E9ECEF' }}>
-                <Users size={20} color="var(--mantine-color-indigo-5)" />
-                <Text fw={700}>Son İşlemler</Text>
+            <Card padding={0} radius="md" shadow="sm" style={{ border: '1px solid #E2E8F0' }}>
+              <Group p="md" bg="gray.0" style={{ borderBottom: '1px solid #E2E8F0' }}>
+                <Activity size={20} color="var(--mantine-color-indigo-5)" />
+                <Text fw={700}>Son Stok Hareketleri</Text>
               </Group>
 
-              <Box p="md" flex={1}>
-                <Timeline active={recentMovements.length} bulletSize={20} lineWidth={2} color="indigo">
-                  {recentMovements.length === 0 ? (
-                    <Timeline.Item title="İşlem Yok" bullet={<Box w={8} h={8} bg="white" style={{ borderRadius: '50%' }} />}>
-                      <Text c="dimmed" size="sm">Henüz bir stok hareketi bulunmuyor.</Text>
-                    </Timeline.Item>
-                  ) : (
-                    recentMovements.map((mov: any) => (
-                      <Timeline.Item 
-                        key={mov.id} 
-                        title={mov.type === 'IN' ? 'Stok Girişi' : 'Stok Çıkışı'} 
-                        bullet={<Box w={8} h={8} bg="white" style={{ borderRadius: '50%' }} />}
-                      >
-                        <Text size="sm" fw={500}>{mov.productName}</Text>
-                        <Text c="dimmed" size="xs">
-                          {mov.quantity} adet {mov.type === 'IN' ? 'alındı' : 'çıkıldı'} {mov.target ? `(${mov.target})` : ''}
-                        </Text>
-                        <Text size="xs" mt={4} c="dimmed" tt="uppercase" fw={600}>
-                          {format(new Date(mov.createdAt), 'dd MMM, HH:mm', { locale: tr })}
-                        </Text>
-                      </Timeline.Item>
-                    ))
-                  )}
-                </Timeline>
+              <Box style={{ overflowX: 'auto' }}>
+                <Table verticalSpacing="sm" horizontalSpacing="md" striped>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>İşlem</Table.Th>
+                      <Table.Th>Ürün</Table.Th>
+                      <Table.Th ta="right">Tarih</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {recentMovements.length === 0 ? (
+                      <Table.Tr><Table.Td colSpan={3} align="center" py="xl"><Text c="dimmed">Hareket yok.</Text></Table.Td></Table.Tr>
+                    ) : (
+                      recentMovements.map((mov: any) => (
+                        <Table.Tr key={mov.id}>
+                          <Table.Td>
+                            <Badge color={mov.type === 'IN' ? 'teal' : 'rose'} variant="light" size="sm">
+                              {mov.type === 'IN' ? 'GİRİŞ' : 'ÇIKIŞ'}
+                            </Badge>
+                          </Table.Td>
+                          <Table.Td>
+                            <Text fw={500} size="sm" truncate maxWidth={180}>{mov.productName}</Text>
+                            <Text size="xs" c="dimmed">{mov.quantity} Adet {mov.target ? `• ${mov.target}` : ''}</Text>
+                          </Table.Td>
+                          <Table.Td ta="right">
+                            <Text size="xs" fw={600} c="dimmed">
+                              {format(new Date(mov.createdAt), 'dd MMM', { locale: tr })}
+                            </Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      ))
+                    )}
+                  </Table.Tbody>
+                </Table>
               </Box>
-
-              <Box p="sm" bg="gray.0" style={{ borderTop: '1px solid #E9ECEF', textAlign: 'center' }}>
-                <Anchor component={Link} href="/stok/hareketler" size="sm" fw={600}>
-                  Tüm Hareketleri Görüntüle
+              <Box p="xs" style={{ textAlign: 'center', borderTop: '1px solid #F1F5F9' }}>
+                <Anchor component={Link} href="/stok/hareketler" size="xs" fw={700}>
+                  TÜMÜNÜ GÖRÜNTÜLE
                 </Anchor>
               </Box>
             </Card>
@@ -344,6 +422,12 @@ export default function Dashboard() {
             description="Sisteme işlenen son stok ve ameliyat hareketleri"
             checked={prefs.showRecent}
             onChange={() => togglePref('showRecent')}
+          />
+          <Switch
+            label="Günün Operasyonları"
+            description="Bugün planlanan ameliyatlar ve saha ekipleri"
+            checked={prefs.showOperations}
+            onChange={() => togglePref('showOperations')}
           />
         </Stack>
       </Drawer>

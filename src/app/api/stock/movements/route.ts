@@ -12,12 +12,15 @@ export async function GET() {
                         supplier: true
                     }
                 },
-                customer: true
+                customer: true,
+                user: {
+                    select: { id: true, name: true }
+                }
             },
             orderBy: {
                 createdAt: 'desc'
             },
-            take: 200 // Performans için şimdilik son 200 satırı getir
+            take: 500 // Performans için son 500 satırı getir
         });
 
         return NextResponse.json(movements);

@@ -41,6 +41,7 @@ model Product {
   category       Category?       @relation(fields: [categoryId], references: [id])
   setCategory    SetCategory?    @relation(fields: [setCategoryId], references: [id])
   stockMovements StockMovement[]
+  kitItems       SurgeryKitItem[]
 }
 
 model SetCategory {
@@ -114,9 +115,11 @@ model StockMovement {
   patientName String?
   doctorName  String?
   createdAt   DateTime  @default(now()) @map("movementDate")
+  userId      String?
   product     Product   @relation(fields: [productId], references: [id])
   lotSerial   LotSerial @relation(fields: [lotSerialId], references: [id])
   customer    Customer? @relation(fields: [customerId], references: [id])
+  user        User?     @relation(fields: [userId], references: [id])
 }
 
 model Surgery {
@@ -127,8 +130,44 @@ model Surgery {
   surgeryDate  DateTime      @default(now())
   status       String        @default("completed")
   notes        String?
+  userId       String?
+  
+  // Yeni Kaynak Yönetimi Alanları
+  city         String?
+  hospitalName String? // Müşteri kaydı dışındaki spesifik hastane adı
+  
   customer     Customer?     @relation(fields: [customerId], references: [id])
+  user         User?         @relation(fields: [userId], references: [id])
   surgeryLines SurgeryLine[]
+  
+  // İlişkiler
+  personnel    Personnel[]
+  devices      Device[]
+}
+
+model Personnel {
+  id           String   @id @default(uuid())
+  name         String
+  phone        String?
+  email        String?
+  role         String?  // Teknisyen, Satış, vb.
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  
+  surgeries    Surgery[]
+}
+
+model Device {
+  id           String   @id @default(uuid())
+  name         String
+  serialNo     String   @unique
+  brand        String?
+  model        String?
+  status       String   @default("AVAILABLE") // AVAILABLE, BUSY, MAINTENANCE
+  lastService  DateTime?
+  createdAt    DateTime @default(now())
+  
+  surgeries    Surgery[]
 }
 
 model SurgeryLine {
@@ -140,6 +179,26 @@ model SurgeryLine {
   surgery     Surgery   @relation(fields: [surgeryId], references: [id])
 }
 
+model SurgeryKit {
+  id          String          @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  items       SurgeryKitItem[]
+}
+
+model SurgeryKitItem {
+  id           String     @id @default(uuid())
+  kitId        String
+  productId    String
+  quantity     Float      @default(1)
+  notes        String?
+  kit          SurgeryKit @relation(fields: [kitId], references: [id], onDelete: Cascade)
+  product      Product    @relation(fields: [productId], references: [id])
+}
+
 model User {
   id        String   @id @default(uuid())
   name      String
@@ -149,4 +208,6 @@ model User {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  stockMovements StockMovement[]
+  surgeries      Surgery[]
 }

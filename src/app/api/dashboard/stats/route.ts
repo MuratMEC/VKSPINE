@@ -101,7 +101,35 @@ export async function GET() {
                 createdAt: { gte: startOfMonth }
             }
         });
-        // 5. Son 5 Hareket
+
+        // 5. Bugünkü Ameliyatlar ve Kaynak Durumu
+        const startOfToday = new Date(now.setHours(0, 0, 0, 0));
+        const endOfToday = new Date(now.setHours(23, 59, 59, 999));
+
+        const todaySurgeries = await prisma.surgery.findMany({
+            where: {
+                surgeryDate: {
+                    gte: startOfToday,
+                    lte: endOfToday
+                }
+            },
+            include: {
+                customer: { select: { name: true } },
+                personnel: { select: { id: true, name: true, role: true } },
+                devices: { select: { id: true, name: true, serialNo: true } }
+            },
+            take: 5
+        });
+
+        // 6. Saha Ekibi ve Cihaz Özet Sayıları
+        const busyPersonnelCount = await prisma.personnel.count({
+            where: { surgeries: { some: { surgeryDate: { gte: startOfToday, lte: endOfToday } } } }
+        });
+        const busyDeviceCount = await prisma.device.count({
+            where: { status: 'BUSY' }
+        });
+
+        // 7. Son 5 Hareket
         const recentMovements = await prisma.stockMovement.findMany({
             take: 5,
             orderBy: { createdAt: 'desc' },
@@ -117,12 +145,22 @@ export async function GET() {
                 activeLots: activeLotCount,
                 criticalExpiring: criticalExpCount,
                 surgeriesThisMonth: surgeryCount,
-                hospitals: hospitalCount
+                hospitals: hospitalCount,
+                todaySurgeriesCount: todaySurgeries.length,
+                busyPersonnel: busyPersonnelCount,
+                busyDevices: busyDeviceCount
             },
             charts: {
                 topProducts,
                 weeklyStats
             },
+            todaySurgeries: todaySurgeries.map(s => ({
+                id: s.id,
+                doctor: s.doctorName,
+                hospital: s.hospitalName || s.customer.name,
+                personnel: s.personnel.map(p => p.name),
+                devices: s.devices.map(d => d.name)
+            })),
             recentMovements: recentMovements.map(m => ({
                 id: m.id,
                 type: m.type,

@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { MantineProvider, ColorSchemeScript, createTheme } from '@mantine/core';
 import '@mantine/core/styles.css';
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
+import AppLayoutWrapper from "@/components/AppLayoutWrapper";
 import "./globals.css";
 
 const inter = Inter({
@@ -52,15 +51,9 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} antialiased font-sans bg-[#F8F9FA] min-h-screen text-[#212529]`} suppressHydrationWarning>
         <MantineProvider theme={theme}>
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <div className="flex-1 flex flex-col min-w-0">
-              <Header />
-              <main className="flex-1 overflow-y-scroll p-6">
-                {children}
-              </main>
-            </div>
-          </div>
+          <AppLayoutWrapper>
+            {children}
+          </AppLayoutWrapper>
         </MantineProvider>
       </body>
     </html>

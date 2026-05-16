@@ -12,11 +12,15 @@ export const sessionOptions = {
 export interface SessionData {
     isLoggedIn: boolean;
     username: string;
+    userId: string;
+    role: string;
 }
 
 export const defaultSession: SessionData = {
     isLoggedIn: false,
     username: "",
+    userId: "",
+    role: "USER"
 };
 
 export async function getSession() {
