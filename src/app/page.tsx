@@ -315,7 +315,7 @@ export default function Dashboard() {
                       expiringList.map((lot: any) => (
                         <Table.Tr key={lot.id}>
                           <Table.Td>
-                            <Text fw={600} size="sm" truncate maxWidth={200}>{lot.productName}</Text>
+                            <Text fw={600} size="sm" truncate style={{ maxWidth: 200 }}>{lot.productName}</Text>
                           </Table.Td>
                           <Table.Td>
                             <Badge variant="outline" color="gray" size="xs">{lot.lotNo}</Badge>
@@ -362,7 +362,7 @@ export default function Dashboard() {
                             </Badge>
                           </Table.Td>
                           <Table.Td>
-                            <Text fw={500} size="sm" truncate maxWidth={180}>{mov.productName}</Text>
+                            <Text fw={500} size="sm" truncate style={{ maxWidth: 180 }}>{mov.productName}</Text>
                             <Text size="xs" c="dimmed">{mov.quantity} Adet {mov.target ? `• ${mov.target}` : ''}</Text>
                           </Table.Td>
                           <Table.Td ta="right">
