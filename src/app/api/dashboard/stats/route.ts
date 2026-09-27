@@ -157,7 +157,7 @@ export async function GET() {
             todaySurgeries: todaySurgeries.map(s => ({
                 id: s.id,
                 doctor: s.doctorName,
-                hospital: s.hospitalName || s.customer.name,
+                hospital: s.hospitalName || s.customer?.name || "Bilinmiyor",
                 personnel: s.personnel.map(p => p.name),
                 devices: s.devices.map(d => d.name)
             })),
